@@ -1,0 +1,25 @@
+project:
+  type: book
+
+book:
+  title: "STAT765 Assignment"
+  subtitle: "Short-Term Forecasting of Net Electricity Consumption for Cohaus"
+  author: "Benjamin Preston"
+  date: "3/14/2024"
+  chapters:
+    - index.qmd
+    - wrangle.qmd
+    - exploration.qmd
+    - summary.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: cosmo
+  pdf:
+    documentclass: scrreprt
+
+editor: visual
+

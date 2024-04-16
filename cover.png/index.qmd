@@ -1,0 +1,32 @@
+# Introduction
+
+## Objective
+
+The objective of this project is to produce short term-forecasts of net energy consumption (generation) for the Cohaus residential development of 20 apartments in Grey Lynn, Auckland.
+
+## Data
+
+The data for this project will be collected from the residential development itself (of which the author is an owner-resident). In network terms, Cohaus is a "customer network" meaning that its Body Corporate negotiate one whoesale energy supply contract with an electricity retailer and then individually meters each of the 20 dwellings based on their energy consumption. Cohaus has also installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer.
+
+I have nearly 3 years of aggregate and anonymized individual 30-minute metered electricity usage data from the 20 private dwellings and will also include metered usage in the commons (including centralised hot water system, electric car chargers, communal laundry, bike shed and garden house). Solar power generation data is metered on 30-minute intervals as well.
+
+Exogenous variables, especially weather data (ambient and dry temperatures, sunlight hours, cloud cover, precipitation) will also be collected from NIWA and incorporated into the model. As energy consumption exhibits significant seasonality (intra-day, daily, weekly, monthly) these factors will need to be incorporated into the model.
+
+## Exploratory Ideas
+
+To start with, the data on solar generation, centralised hot water, and electric car pool usage will be collected and organized. The data will be cleaned and processed to remove any missing or erroneous entries. Next, time series analysis techniques will be applied to the solar generation data to forecast future energy production. Statistical models will be developed to forecast the demand for centralised hot water based on historical consumption patterns. The forecasts for private and communal energy consumption and solar generation will be netted to provide a comprehensive short term consumption / generation forecast for Cohaus.
+
+After wrangling the data, I'm key to do a "shoot out" of sorts by training a battery (no pun intended) of short-term prediction models on the data given. From simple to more complex I hope to build the following models:
+
+-   Naive model with seasonal adjustments (intra-day, intra-week, inter-quarter)
+-   STL[^index-1] model
+-   ARIMAx[^index-2] model
+-   Prophet model
+-   Recurring Neural Network (possibly Long-Short Term Memory) model
+
+[^index-1]:  Seasonal and Trend decomposition using Loess.
+[^index-2]:  Auto Regressive Integrated Moving Average with exogenous variables.
+
+## Challenges
+
+The accuracy of the short term forecasts may be affected by external factors such as weather conditions, changes in occupancy patterns, and variations in electric car usage. These factors will need to be carefully considered and accounted for in the forecasting models. The availability and quality of data on solar generation, centralised hot water, and electric car usage may vary. The first year of data collected includes considerable time when residents were in COVID-19 related lockdowns, and this may not prove valuable in training a model to produce short term forecasts now. Seasonality is layered and complex (spanning intra-day through inter-quarter) and will need to be modeled carefully. Data collection and data quality assurance processes will need to be implemented to ensure reliable and accurate forecasts. The integration of forecasts for energy generation, hot water demand, and electric car usage may require the development of a sophisticated modeling framework that can capture the interdependencies between these variables.
