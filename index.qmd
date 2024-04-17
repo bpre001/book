@@ -2,7 +2,7 @@
 
 ## Objective
 
-The objective of this project is to produce short term-forecasts of net energy use for the Cohaus residential development of 20 apartments in Grey Lynn, Auckland.
+The objective of this project is to produce 3-day forecasts of net energy use for the Cohaus residential development of 20 apartments at 11-13 Surrey Crescent, Grey Lynn, Auckland.
 
 ## Data
 
