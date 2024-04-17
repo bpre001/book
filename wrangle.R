@@ -36,6 +36,8 @@ cohaus_wide <- tibble(
   PV = PV
 )
 
+glimpse(cohaus_wide)
+
 cohaus_wide <- cohaus_wide |> 
   fill(!dttm, .direction = "down") |> 
   mutate(date = date(dttm),
@@ -46,13 +48,15 @@ cohaus_wide <- cohaus_wide |>
             CS = sum(CS),
             EV = sum(EV),
             HP = sum(HP),
-            Source = sum(PV),
-            Sink = sum(APT,CS,EV,HP)
+            PV = sum(PV),
+            Sink = sum(APT,CS,EV,HP),
+            NetUse = Sink + PV
             ) |>
   ungroup() |>
-  select(dttm,APT,CS,EV,HP,Source,Sink) |> 
+  select(dttm,APT,CS,EV,HP,PV,Sink) |> 
   arrange(dttm) 
   
+
 
 # write to rds
 cohaus_wide |> write_rds("data/cohaus_wide.rds")
@@ -66,8 +70,8 @@ cohaus_long <- cohaus_wide |>
 
 # plot a month of use (sink) and generation (source)
 cohaus_long |> 
-  filter(dttm < dmy("01102021"),
-         sourceID %in% c("Sink", "Source")) |> 
+  filter(dttm > dmy("31012024"),
+         sourceID %in% c("Sink", "PV")) |> 
   ggplot(aes(x = dttm, y = kWh, color = sourceID)) +
   geom_line()
 
