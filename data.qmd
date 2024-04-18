@@ -42,9 +42,6 @@ glimpse(cohaus_wide)
 
 ```{r}
 
-cohaus_long <- cohaus_wide |> 
-  pivot_longer(cols = -dttm, names_to = "Name", values_to = "Value")
-
 cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
 
 ```
@@ -52,83 +49,43 @@ cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
 ```{r plots, messages = FALSE}
 
 cohaus_ts |> 
-  gg_tsdisplay(PV, plot_type = "partial")
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(Use, plot_type = "histogram")
 
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(Gen, plot_type = "histogram")
+
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(NetUse, plot_type = "histogram")
+
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(Import, plot_type = "histogram")
+
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(Export, plot_type = "histogram")
 
 cohaus_wide |> 
-  select(APT,EV,CS,HP,PV) |> 
+  select(APT,EV,CS,HP,Gen) |> 
   ggpairs(progress = FALSE)
 
 cohaus_wide |> 
-  select(Sink,PV,AT) |> 
+  select(Use,Gen,AT) |> 
   ggpairs(progress = FALSE)
 
 cohaus_wide |>
   group_by(year(dttm)) |> 
-  summarise(Sink = sum(Sink),
-            PV = sum(PV),
-            kWh = sum(kWh),
-            kWhRev = sum(kWhRev)
+  summarise(Use = sum(Use),
+            Gen = sum(Gen),
+            Import = sum(pmax(NetUse,0)),
+            Export = sum(-pmin(NetUse,0))
             ) 
   
-  
-  
-
-
 
 ```
 
-```{r}
 
-qtrDummy <- function(x,y) {
-  ifelse(quarter(x) == y, 1, 0)
-}
-
-cohaus_ts <- cohaus_ts |> 
-  mutate(qtr1 = qtrDummy(dttm,1),
-         qtr2 = qtrDummy(dttm,2),
-         qtr3 = qtrDummy(dttm,3),
-         qtr4 = qtrDummy(dttm,4)
-         )
-
-cohaus_ts |>
-  ggplot(aes(x = hour(dttm), y = -PV)) +
-  geom_point(alpha = 0.1, col = "gold") +
-  facet_wrap(~month(dttm))
-  
-cohaus_ts |>
-  ggplot(aes(x = hour(dttm), y = Sink)) +
-  geom_point(alpha = 0.1, col = "blue") +
-  facet_wrap(~month(dttm))  
-
-cohaus_ts |>
-  ggplot(aes(x = hour(dttm), y = Tdry)) +
-  geom_point(alpha = 0.05, col = "red") +
-  facet_wrap(~month(dttm))  
-  
-  
-fit <- cohaus_ts |>
-  model(snaive = SNAIVE(PV ~ lag("week")),
-        lm = TSLM(PV ~ season() + qtr2 + qtr3 + qtr4 + workDay + sunUp + Tdry)
-        )
-
-fit |> select(.model = lm) |> report()
-
-fit |> select(.model = snaive) |> 
-  forecast(h = 24*3) |> 
-  autoplot()
-
-
-```
-
-```{r}
-  
-  
-  
-```
-
-```{r}
-
-
-```
 

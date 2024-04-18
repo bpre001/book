@@ -2,6 +2,21 @@
 
 In summary, this book has no content whatsoever.
 
-```{r}
-1 + 1
+```{r plots}
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = Gen)) +
+  geom_point(alpha = 0.1, col = "gold") +
+  facet_wrap(~month)
+  
+cohaus_ts |>
+  ggplot(aes(y = Use)) +
+  geom_histogram(alpha = 0.1, col = "blue") +
+  facet_wrap(~hour)  
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = Tdry)) +
+  geom_point(alpha = 0.05, col = "red") +
+  facet_grid(~month,scale = "fixed")  
+  
 ```

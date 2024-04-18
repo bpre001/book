@@ -3,6 +3,8 @@
 
 library(tidyverse)
 library(fpp3)
+library(readxl)
+library(suncalc)
 
 # read in cohaus use and generation data
 cohaus <- read_csv("data/cohaus.csv") |> 
@@ -51,21 +53,23 @@ cohaus_wide <- cohaus_wide |>
             CS = sum(CS),
             EV = sum(EV),
             HP = sum(HP),
-            PV = sum(PV),
-            Sink = sum(APT,CS,EV,HP),
-            NetUse = Sink + PV
+            Gen = -sum(PV),
+            Use = sum(APT,CS,EV,HP),
+            NetUse = Use - Gen,
+            Import = pmax(NetUse,0),
+            Export = -pmin(NetUse,0)
             ) |>
   ungroup() |>
-  select(dttm,APT,CS,EV,HP,PV,Sink) |> 
+  select(dttm,APT,CS,EV,HP,Gen,Use,NetUse,Import,Export) |> 
   arrange(dttm) 
 
 # read in nz public holidays (including auckland anniversary)
+#
 aklhols <- read_excel("data/aklhols.xlsx") |> 
   mutate(ObsDate = as_date(ObsDate))
 
 # create table of sunrise and sunsets for Auckland, NZ 
-
-
+#
 getAklSunrise <- function(x = Sys.Date()) {
   tmp <- getSunlightTimes(date = x, 
                           lon = 174.7402, # lon & lat for Grey Lynn
@@ -86,8 +90,8 @@ getAklSunset <- function(x = Sys.Date()) {
   return(as_datetime(tmp[,5]))
 }
 
-
 # dummy variable if sun is up
+# 
 isSunUp <- function(x) {
   x <- force_tz(x, tzone = "Pacific/Auckland")
   ifelse(as_datetime(x) > getAklSunrise(as_date(x)) &
@@ -98,7 +102,8 @@ isSunUp <- function(x) {
 sunUp <- cohaus_wide$dttm |> 
   map_lgl(isSunUp)
 
-# dummy variable if work day                   
+# dummy variable if work day
+#                    
 isWorkDay <- function(x) {
   ifelse(lubridate::wday(x) %in% c(1,7), FALSE, # 1 = Sun, 7 = Sat
          ifelse(as_date(x) %in% aklhols$ObsDate, FALSE, TRUE))
@@ -109,10 +114,11 @@ workDay <- cohaus_wide$dttm |>
 
 # add sunUp and workday to cohaus_wide 
 cohaus_wide <- cohaus_wide |> 
-  add_column(sunUp = sunUp,
-             workDay = workDay)
+  add_column(sunUp = as_factor(sunUp),
+             workDay = as_factor(workDay))
 
-# read in motat temps and wind data
+# read in NIWA temps and wind data from Auckland MOTAT EWS station
+# 
 motattemp <- read_csv("data/motattemp.csv", 
                       col_types = cols(Date = col_date(format = "%Y%m%d"), 
                                        Hour = col_time(format = "%H")))
@@ -123,7 +129,8 @@ motatwind <- read_csv("data/motatwind.csv",
 
 # join motat temp and wind tibbles, compute ambient temperature
 # formula: australian bureau of meteorology
-
+# https://www.weather.gov/media/epz/wxcalc/vaporPressure.pdf
+# 
 weather <- motattemp |> left_join(motatwind, by = c("Date","Hour")) |> 
   fill(!c(Date,Hour), .direction = "down") |> 
   mutate(dttm = ymd(Date) + hms(Hour),
@@ -137,18 +144,39 @@ cohaus_wide <- cohaus_wide |>
 cohaus_wide <- cohaus_wide |> 
   fill(Tdry:AT, .direction = "down")
 
-Sink <- cohaus_wide |> pull(Sink)
-PV <- cohaus_wide |> pull(PV)
 
-kWh <- pmax(Sink+PV,0)
-kWhRev <- pmin(Sink+PV,0)
+# create dummy variables for hour, week, month, quarter, year 
+# 
+periodDummy <- function(x = now(), y = "hour") {
+  x <- force_tz(x, tzone = "Pacific/Auckland")
+  ifelse(y == "hour", paste0("H",sprintf("%02d", hour(x))),
+         ifelse(y == "week", paste0("W",sprintf("%02d", week(x))),
+                ifelse(y == "month", paste0("M",sprintf("%02d", month(x))),
+                       ifelse(y == "quarter", paste0("Q",sprintf("%02d", quarter(x))),
+                              ifelse(y == "year", paste0("Y",sprintf("%02d", year(x))), NA)
+                              )
+                       )
+                )
+         )
+}
 
-cohaus_wide <- cohaus_wide |> 
-  mutate(kWh = kWh,
-         kWhRev = kWhRev)
+hour <- map2_chr(cohaus_wide$dttm, "hour", periodDummy)
+week <- map2_chr(cohaus_wide$dttm, "week", periodDummy)
+month <- map2_chr(cohaus_wide$dttm, "month", periodDummy)
+quarter <- map2_chr(cohaus_wide$dttm, "quarter", periodDummy)
+year <- map2_chr(cohaus_wide$dttm, "year", periodDummy)
+
+cohaus_wide <- cohaus_wide |>
+  mutate(hour = as_factor(hour),
+         week = as_factor(week),
+         month = as_factor(month),
+         quarter = as_factor(quarter),
+         year = as_factor(year)
+         )
 
 # write to rds
 cohaus_wide |> write_rds("data/cohaus_wide.rds")
 
+glimpse(cohaus_wide)
 
 
