@@ -4,7 +4,17 @@
     "href": "data.html",
     "title": "2  Data",
     "section": "",
-    "text": "This is a book created from markdown and executable code.\nSee Knuth (1984) for additional discussion of literate programming.\n\n1 + 1\n\n[1] 2\n\n\n\n\n\n\nKnuth, Donald E. 1984. “Literate Programming.” Comput. J. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
+    "text": "2.1 Goal\nThe objective of this project is to produce 3-day forecasts of net energy use for the Cohaus residential development of 20 apartments at 11-13 Surrey Crescent, Grey Lynn, Auckland.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Data</span>"
+    ]
+  },
+  {
+    "objectID": "data.html#data-source",
+    "href": "data.html#data-source",
+    "title": "2  Data",
+    "section": "2.2 Data Source",
+    "text": "2.2 Data Source\nCohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Half hourly kWh electricity use and generation measures are as follows:\n\nAPT aggregated apartment electricity use\nCS common services (lighting, laundry, bike shed, garden house)\nEV electric vehicle chargers\nHP centralised hot water and heat pumps\nPV photo-voltaic electricity generation\n\nNet energy use (i.e. drawn from the grid) is calculated by summing the five measures.\n\nlibrary(tidyverse)\nlibrary(readxl)\nlibrary(fpp3)\nlibrary(GGally)\n\n\n# read in cohaus_wide (painful wrangle is in separate wrangle.R)\ncohaus_wide &lt;- read_rds(\"data/cohaus_wide.rds\")\n\ncohaus_long &lt;- cohaus_wide |&gt; \n  pivot_longer(cols = -dttm, names_to = \"Name\", values_to = \"Value\")\n\ncohaus_ts &lt;- cohaus_wide |&gt; as_tsibble(index = dttm)\n\n\ncohaus_ts |&gt; \n  gg_tsdisplay(PV, plot_type = \"partial\")\n\n\n\n\n\n\n\ncohaus_wide |&gt; \n  select(APT,EV,CS,HP,PV) |&gt; \n  ggpairs(progress = FALSE)\n\n\n\n\n\n\n\ncohaus_wide |&gt; \n  select(Sink,PV,AT) |&gt; \n  ggpairs(progress = FALSE)\n\n\n\n\n\n\n\n\n\nqtrDummy &lt;- function(x,y) {\n  ifelse(quarter(x) == y, 1, 0)\n}\n\ncohaus_ts &lt;- cohaus_ts |&gt; \n  mutate(qtr1 = qtrDummy(dttm,1),\n         qtr2 = qtrDummy(dttm,2),\n         qtr3 = qtrDummy(dttm,3),\n         qtr4 = qtrDummy(dttm,4)\n         )\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = -PV)) +\n  geom_jitter(alpha = 0.1, col = \"gold\") +\n  facet_wrap(~quarter(dttm))\n\n\n\n\n\n\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = Sink)) +\n  geom_jitter(alpha = 0.1, col = \"blue\") +\n  facet_wrap(~quarter(dttm))  \n\n\n\n\n\n\n\nfit &lt;- cohaus_ts |&gt;\n  model(snaive = SNAIVE(Sink ~ lag(\"week\")),\n        lm = TSLM(Sink ~ season() + qtr2 + qtr3 + qtr4 + workDay + sunUp + AT)\n        )\n\nfit |&gt; select(.model = snaive) |&gt; report()\n\nSeries: Sink \nModel: SNAIVE \n\nsigma^2: 10.5942 \n\nfit |&gt; select(.model = snaive) |&gt; \n  forecast(h = 24*3) |&gt; \n  autoplot()",
     "crumbs": [
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>Data</span>"
     ]
@@ -27,16 +37,6 @@
     "text": "In summary, this book has no content whatsoever.\n\n1 + 1\n\n[1] 2",
     "crumbs": [
       "<span class='chapter-number'>4</span>  <span class='chapter-title'>Summary</span>"
-    ]
-  },
-  {
-    "objectID": "references.html",
-    "href": "references.html",
-    "title": "5  References",
-    "section": "",
-    "text": "Knuth, Donald E. 1984. “Literate Programming.” Comput.\nJ. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
-    "crumbs": [
-      "<span class='chapter-number'>5</span>  <span class='chapter-title'>References</span>"
     ]
   }
 ]

@@ -20,73 +20,97 @@ Cohaus was completed in July 2021 and teh community moved in shortly thereafter,
 
 Net energy use (i.e. drawn from the grid) is calculated by summing the five measures.
 
-```{r cohaus_data, message=FALSE}
+```{r library, message=FALSE}
 
 library(tidyverse)
 library(readxl)
-library(suncalc)
 library(fpp3)
+library(GGally)
+
+```
+
+
+
+```{r cohaus, message=FALSE}
 
 # read in cohaus_wide (painful wrangle is in separate wrangle.R)
 cohaus_wide <- read_rds("data/cohaus_wide.rds")
 
-# read in nz public holidays (including auckland anniversary)
-aklhols <- read_excel("data/aklhols.xlsx") |> 
-  mutate(ObsDate = ymd(ObsDate))
+cohaus_long <- cohaus_wide |> 
+  pivot_longer(cols = -dttm, names_to = "Name", values_to = "Value")
 
-# create table of sunrise and sunsets for Auckland, NZ 
+cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
 
-Date <- seq(from = floor_date(min(cohaus_wide$dttm)),
-            to = floor_date(max(cohaus_wide$dttm)+years(x = 1)),
-            by = "day")
+```
 
+```{r plots, messages = FALSE}
 
-getAklSunrise <- function(x = Sys.Date()) {
-  tmp <- getSunlightTimes(date = x, 
-                           lon = 174.7402, # lon & lat for Grey Lynn
-                           lat = -36.8645, 
-                           keep = c("sunrise","sunset"), 
-                           tz = "Pacific/Auckland"
-                          )
-  return(as_datetime(tmp[,4]))
-}
-
-getAklSunset <- function(x = Sys.Date()) {
-  tmp <- getSunlightTimes(date = x, 
-                           lon = 174.7402, 
-                           lat = -36.8645, 
-                           keep = c("sunrise","sunset"), 
-                           tz = "Pacific/Auckland"
-                          )
-  return(as_datetime(tmp[,5]))
-}
-
-sunTimes <- tibble(date = Date, 
-                   sunrise = getAklSunrise(as_date(Date)),
-                   sunset = getAklSunset(as_date(Date))
-                   )
+cohaus_ts |> 
+  gg_tsdisplay(PV, plot_type = "partial")
 
 
-# not right needs to be fixed
-isSunUp <- function(x = Sys.Date()) {
-  ifelse(as_date(x) > getAklSunrise(as_date(x)) & 
-         as_date(x) < getAklSunset(as_date(x)), 
-         TRUE, FALSE)
-}
+cohaus_wide |> 
+  select(APT,EV,CS,HP,PV) |> 
+  ggpairs(progress = FALSE)
 
-isSunUp(dmy_hm("18042024 10:00", tz = "Pacific/Auckland"))
-
-
-# function to determine if workday or not including public hols                   
-isWorkDay <- function(x) {
-  ifelse(lubridate::wday(x) %in% c(1,7), FALSE, # 1 = Sun, 7 = Sat
-         ifelse(x %in% aklhols$ObsDate, FALSE, TRUE))
-}
-
-# glom daylight hours and workdays 
-
-
-
+cohaus_wide |> 
+  select(Sink,PV,AT) |> 
+  ggpairs(progress = FALSE)
 
 
 ```
+
+```{r}
+
+qtrDummy <- function(x,y) {
+  ifelse(quarter(x) == y, 1, 0)
+}
+
+cohaus_ts <- cohaus_ts |> 
+  mutate(qtr1 = qtrDummy(dttm,1),
+         qtr2 = qtrDummy(dttm,2),
+         qtr3 = qtrDummy(dttm,3),
+         qtr4 = qtrDummy(dttm,4)
+         )
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = -PV)) +
+  geom_point(alpha = 0.1, col = "gold") +
+  facet_wrap(~month(dttm))
+  
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = Sink)) +
+  geom_point(alpha = 0.1, col = "blue") +
+  facet_wrap(~month(dttm))  
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = Tdry)) +
+  geom_point(alpha = 0.05, col = "red") +
+  facet_wrap(~month(dttm))  
+  
+  
+fit <- cohaus_ts |>
+  model(snaive = SNAIVE(PV ~ lag("week")),
+        lm = TSLM(PV ~ season() + qtr2 + qtr3 + qtr4 + workDay + sunUp + Tdry)
+        )
+
+fit |> select(.model = lm) |> report()
+
+fit |> select(.model = snaive) |> 
+  forecast(h = 24*3) |> 
+  autoplot()
+
+
+```
+
+```{r}
+  
+  
+  
+```
+
+```{r}
+
+
+```
+
