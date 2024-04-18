@@ -36,6 +36,12 @@ library(GGally)
 # read in cohaus_wide (painful wrangle is in separate wrangle.R)
 cohaus_wide <- read_rds("data/cohaus_wide.rds")
 
+glimpse(cohaus_wide)
+
+```
+
+```{r}
+
 cohaus_long <- cohaus_wide |> 
   pivot_longer(cols = -dttm, names_to = "Name", values_to = "Value")
 
@@ -56,6 +62,18 @@ cohaus_wide |>
 cohaus_wide |> 
   select(Sink,PV,AT) |> 
   ggpairs(progress = FALSE)
+
+cohaus_wide |>
+  group_by(year(dttm)) |> 
+  summarise(Sink = sum(Sink),
+            PV = sum(PV),
+            kWh = sum(kWh),
+            kWhRev = sum(kWhRev)
+            ) 
+  
+  
+  
+
 
 
 ```

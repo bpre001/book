@@ -1,5 +1,65 @@
 [
   {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "STAT765 Assignment",
+    "section": "",
+    "text": "1 Introduction",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#objective",
+    "href": "index.html#objective",
+    "title": "STAT765 Assignment",
+    "section": "1.1 Objective",
+    "text": "1.1 Objective\nThe objective of this project is to produce 3-day forecasts of net energy use for the Cohaus residential development of 20 apartments at 11-13 Surrey Crescent, Grey Lynn, Auckland.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#data",
+    "href": "index.html#data",
+    "title": "STAT765 Assignment",
+    "section": "1.2 Data",
+    "text": "1.2 Data\nThe data for this project will be collected from the residential development itself (of which the author is an owner-resident). In network terms, Cohaus is a “customer network” meaning that its Body Corporate negotiate one whoesale energy supply contract with an electricity retailer and then individually meters each of the 20 dwellings based on their energy consumption. Cohaus has also installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer.\nI have nearly 3 years of aggregate and anonymized individual 30-minute metered electricity usage data from the 20 private dwellings and will also include metered usage in the commons (including centralised hot water system, electric car chargers, communal laundry, bike shed and garden house). Solar power generation data is metered on 30-minute intervals as well.\nExogenous variables, especially weather data (ambient and dry temperatures, sunlight hours, cloud cover, precipitation) will also be collected from NIWA and incorporated into the model. As energy consumption exhibits significant seasonality (intra-day, daily, weekly, monthly) these factors will need to be incorporated into the model.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#exploratory-ideas",
+    "href": "index.html#exploratory-ideas",
+    "title": "STAT765 Assignment",
+    "section": "1.3 Exploratory Ideas",
+    "text": "1.3 Exploratory Ideas\nTo start with, the data on solar generation, centralised hot water, and electric car pool usage will be collected and organized. The data will be cleaned and processed to remove any missing or erroneous entries. Next, time series analysis techniques will be applied to the solar generation data to forecast future energy production. Statistical models will be developed to forecast the demand for centralised hot water based on historical consumption patterns. The forecasts for private and communal energy consumption and solar generation will be netted to provide a comprehensive short term consumption / generation forecast for Cohaus.\nAfter wrangling the data, I’m key to do a “shoot out” of sorts by training a battery (no pun intended) of short-term prediction models on the data given. From simple to more complex I hope to build the following models:\n\nNaive model with seasonal adjustments (intra-day, intra-week, inter-quarter)\nSTL1 model\nARIMAx2 model\nProphet model\nRecurring Neural Network (possibly Long-Short Term Memory) model",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#challenges",
+    "href": "index.html#challenges",
+    "title": "STAT765 Assignment",
+    "section": "1.4 Challenges",
+    "text": "1.4 Challenges\nThe accuracy of the short term forecasts may be affected by external factors such as weather conditions, changes in occupancy patterns, and variations in electric car usage. These factors will need to be carefully considered and accounted for in the forecasting models. The availability and quality of data on solar generation, centralised hot water, and electric car usage may vary. The first year of data collected includes considerable time when residents were in COVID-19 related lockdowns, and this may not prove valuable in training a model to produce short term forecasts now. Seasonality is layered and complex (spanning intra-day through inter-quarter) and will need to be modeled carefully. Data collection and data quality assurance processes will need to be implemented to ensure reliable and accurate forecasts. The integration of forecasts for energy generation, hot water demand, and electric car usage may require the development of a sophisticated modeling framework that can capture the interdependencies between these variables.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#footnotes",
+    "href": "index.html#footnotes",
+    "title": "STAT765 Assignment",
+    "section": "",
+    "text": "Seasonal and Trend decomposition using Loess.↩︎\nAuto Regressive Integrated Moving Average with exogenous variables.↩︎",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
     "objectID": "data.html",
     "href": "data.html",
     "title": "2  Data",
@@ -14,7 +74,7 @@
     "href": "data.html#data-source",
     "title": "2  Data",
     "section": "2.2 Data Source",
-    "text": "2.2 Data Source\nCohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Half hourly kWh electricity use and generation measures are as follows:\n\nAPT aggregated apartment electricity use\nCS common services (lighting, laundry, bike shed, garden house)\nEV electric vehicle chargers\nHP centralised hot water and heat pumps\nPV photo-voltaic electricity generation\n\nNet energy use (i.e. drawn from the grid) is calculated by summing the five measures.\n\nlibrary(tidyverse)\nlibrary(readxl)\nlibrary(fpp3)\nlibrary(GGally)\n\n\n# read in cohaus_wide (painful wrangle is in separate wrangle.R)\ncohaus_wide &lt;- read_rds(\"data/cohaus_wide.rds\")\n\ncohaus_long &lt;- cohaus_wide |&gt; \n  pivot_longer(cols = -dttm, names_to = \"Name\", values_to = \"Value\")\n\ncohaus_ts &lt;- cohaus_wide |&gt; as_tsibble(index = dttm)\n\n\ncohaus_ts |&gt; \n  gg_tsdisplay(PV, plot_type = \"partial\")\n\n\n\n\n\n\n\ncohaus_wide |&gt; \n  select(APT,EV,CS,HP,PV) |&gt; \n  ggpairs(progress = FALSE)\n\n\n\n\n\n\n\ncohaus_wide |&gt; \n  select(Sink,PV,AT) |&gt; \n  ggpairs(progress = FALSE)\n\n\n\n\n\n\n\n\n\nqtrDummy &lt;- function(x,y) {\n  ifelse(quarter(x) == y, 1, 0)\n}\n\ncohaus_ts &lt;- cohaus_ts |&gt; \n  mutate(qtr1 = qtrDummy(dttm,1),\n         qtr2 = qtrDummy(dttm,2),\n         qtr3 = qtrDummy(dttm,3),\n         qtr4 = qtrDummy(dttm,4)\n         )\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = -PV)) +\n  geom_jitter(alpha = 0.1, col = \"gold\") +\n  facet_wrap(~quarter(dttm))\n\n\n\n\n\n\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = Sink)) +\n  geom_jitter(alpha = 0.1, col = \"blue\") +\n  facet_wrap(~quarter(dttm))  \n\n\n\n\n\n\n\nfit &lt;- cohaus_ts |&gt;\n  model(snaive = SNAIVE(Sink ~ lag(\"week\")),\n        lm = TSLM(Sink ~ season() + qtr2 + qtr3 + qtr4 + workDay + sunUp + AT)\n        )\n\nfit |&gt; select(.model = snaive) |&gt; report()\n\nSeries: Sink \nModel: SNAIVE \n\nsigma^2: 10.5942 \n\nfit |&gt; select(.model = snaive) |&gt; \n  forecast(h = 24*3) |&gt; \n  autoplot()",
+    "text": "2.2 Data Source\nCohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Half hourly kWh electricity use and generation measures are as follows:\n\nAPT aggregated apartment electricity use\nCS common services (lighting, laundry, bike shed, garden house)\nEV electric vehicle chargers\nHP centralised hot water and heat pumps\nPV photo-voltaic electricity generation\n\nNet energy use (i.e. drawn from the grid) is calculated by summing the five measures.\n\nlibrary(tidyverse)\nlibrary(readxl)\nlibrary(fpp3)\nlibrary(GGally)\n\n\n# read in cohaus_wide (painful wrangle is in separate wrangle.R)\ncohaus_wide &lt;- read_rds(\"data/cohaus_wide.rds\")\n\ncohaus_long &lt;- cohaus_wide |&gt; \n  pivot_longer(cols = -dttm, names_to = \"Name\", values_to = \"Value\")\n\ncohaus_ts &lt;- cohaus_wide |&gt; as_tsibble(index = dttm)\n\n\ncohaus_ts |&gt; \n  gg_tsdisplay(PV, plot_type = \"partial\")\n\n\n\n\n\n\n\ncohaus_wide |&gt; \n  select(APT,EV,CS,HP,PV) |&gt; \n  ggpairs(progress = FALSE)\n\n\n\n\n\n\n\ncohaus_wide |&gt; \n  select(Sink,PV,AT) |&gt; \n  ggpairs(progress = FALSE)\n\n\n\n\n\n\n\n\n\nqtrDummy &lt;- function(x,y) {\n  ifelse(quarter(x) == y, 1, 0)\n}\n\ncohaus_ts &lt;- cohaus_ts |&gt; \n  mutate(qtr1 = qtrDummy(dttm,1),\n         qtr2 = qtrDummy(dttm,2),\n         qtr3 = qtrDummy(dttm,3),\n         qtr4 = qtrDummy(dttm,4)\n         )\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = -PV)) +\n  geom_point(alpha = 0.1, col = \"gold\") +\n  facet_wrap(~month(dttm))\n\n\n\n\n\n\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = Sink)) +\n  geom_point(alpha = 0.1, col = \"blue\") +\n  facet_wrap(~month(dttm))  \n\n\n\n\n\n\n\ncohaus_ts |&gt;\n  ggplot(aes(x = hour(dttm), y = Tdry)) +\n  geom_point(alpha = 0.05, col = \"red\") +\n  facet_wrap(~month(dttm))  \n\n\n\n\n\n\n\nfit &lt;- cohaus_ts |&gt;\n  model(snaive = SNAIVE(PV ~ lag(\"week\")),\n        lm = TSLM(PV ~ season() + qtr2 + qtr3 + qtr4 + workDay + sunUp + Tdry)\n        )\n\nfit |&gt; select(.model = lm) |&gt; report()\n\nSeries: PV \nModel: TSLM \n\nResiduals:\n     Min       1Q   Median       3Q      Max \n-25.1933  -2.1550   0.4275   2.0934  18.5465 \n\nCoefficients:\n               Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)     2.58810    0.27189   9.519  &lt; 2e-16 ***\nseason()day2   -0.06072    0.22645  -0.268 0.788615    \nseason()day3   -0.11177    0.22665  -0.493 0.621915    \nseason()day4   -0.16148    0.22656  -0.713 0.476011    \nseason()day5   -0.19760    0.22662  -0.872 0.383259    \nseason()day6   -0.21803    0.22666  -0.962 0.336107    \nseason()day7   -0.46375    0.22702  -2.043 0.041082 *  \nseason()day8   -2.45551    0.24723  -9.932  &lt; 2e-16 ***\nseason()day9   -6.38545    0.28123 -22.705  &lt; 2e-16 ***\nseason()day10 -10.69363    0.28137 -38.005  &lt; 2e-16 ***\nseason()day11 -14.49122    0.28206 -51.376  &lt; 2e-16 ***\nseason()day12 -17.01445    0.28290 -60.143  &lt; 2e-16 ***\nseason()day13 -18.18177    0.28349 -64.136  &lt; 2e-16 ***\nseason()day14 -17.90846    0.28380 -63.102  &lt; 2e-16 ***\nseason()day15 -16.68659    0.28391 -58.774  &lt; 2e-16 ***\nseason()day16 -13.96247    0.28369 -49.218  &lt; 2e-16 ***\nseason()day17 -10.23029    0.28313 -36.133  &lt; 2e-16 ***\nseason()day18  -6.49669    0.28237 -23.008  &lt; 2e-16 ***\nseason()day19  -3.05869    0.25185 -12.145  &lt; 2e-16 ***\nseason()day20  -0.87966    0.24510  -3.589 0.000333 ***\nseason()day21  -0.10984    0.23496  -0.467 0.640151    \nseason()day22   0.22306    0.22668   0.984 0.325101    \nseason()day23   0.13701    0.22653   0.605 0.545311    \nseason()day24   0.06236    0.22646   0.275 0.783027    \nqtr2            2.92212    0.10729  27.236  &lt; 2e-16 ***\nqtr3            1.80965    0.12545  14.426  &lt; 2e-16 ***\nqtr4           -0.35285    0.09682  -3.645 0.000269 ***\nworkDayTRUE    -0.04380    0.06999  -0.626 0.531473    \nsunUpTRUE       1.02438    0.16743   6.118 9.66e-10 ***\nTdry           -0.24079    0.01122 -21.464  &lt; 2e-16 ***\n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 4.5 on 18928 degrees of freedom\nMultiple R-squared: 0.7185, Adjusted R-squared: 0.7181\nF-statistic:  1666 on 29 and 18928 DF, p-value: &lt; 2.22e-16\n\nfit |&gt; select(.model = snaive) |&gt; \n  forecast(h = 24*3) |&gt; \n  autoplot()",
     "crumbs": [
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>Data</span>"
     ]

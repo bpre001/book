@@ -137,7 +137,15 @@ cohaus_wide <- cohaus_wide |>
 cohaus_wide <- cohaus_wide |> 
   fill(Tdry:AT, .direction = "down")
 
+Sink <- cohaus_wide |> pull(Sink)
+PV <- cohaus_wide |> pull(PV)
 
+kWh <- pmax(Sink+PV,0)
+kWhRev <- pmin(Sink+PV,0)
+
+cohaus_wide <- cohaus_wide |> 
+  mutate(kWh = kWh,
+         kWhRev = kWhRev)
 
 # write to rds
 cohaus_wide |> write_rds("data/cohaus_wide.rds")
