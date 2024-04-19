@@ -1,5 +1,23 @@
 # Data
 
+```{r loadin, include=FALSE}
+
+library(tidyverse)
+library(readxl)
+library(fpp3)
+library(GGally)
+
+# read in cohaus_wide (painful wrangle is in separate wrangle.R)
+# 
+cohaus_wide <- read_rds("data/cohaus_wide.rds")
+
+#convert to tsibble
+#
+cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
+
+```
+
+
 ## Goal
 
 The objective of this project is to produce 3-day forecasts of net energy use for the Cohaus residential development of 20 apartments at 11-13 Surrey Crescent, Grey Lynn, Auckland.
@@ -20,61 +38,28 @@ Cohaus was completed in July 2021 and teh community moved in shortly thereafter,
 
 Net energy use (i.e. drawn from the grid) is calculated by summing the five measures.
 
-```{r library, message=FALSE}
-
-library(tidyverse)
-library(readxl)
-library(fpp3)
-library(GGally)
-
-```
-
-
-
-```{r cohaus, message=FALSE}
-
-# read in cohaus_wide (painful wrangle is in separate wrangle.R)
-cohaus_wide <- read_rds("data/cohaus_wide.rds")
-
-glimpse(cohaus_wide)
-
-```
-
-```{r}
-
-cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
-
-```
-
 ```{r plots, messages = FALSE}
 
 cohaus_ts |> 
   filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(Use, plot_type = "histogram")
+  gg_tsdisplay(Use, plot_type = "histogram") + 
+  labs(title = "Cohaus Electricity Usage for Jan 2022 (kWh)")
 
 cohaus_ts |> 
   filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(Gen, plot_type = "histogram")
+  gg_tsdisplay(Gen, plot_type = "histogram") + 
+  labs(title = "Cohaus Electricity Generation for Jan 2022 (kWh)")
 
 cohaus_ts |> 
   filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(NetUse, plot_type = "histogram")
-
-cohaus_ts |> 
-  filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(Import, plot_type = "histogram")
-
-cohaus_ts |> 
-  filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(Export, plot_type = "histogram")
+  gg_tsdisplay(NetUse, plot_type = "histogram") + 
+  labs(title = "Cohaus Electricity Net Usage for Jan 2022 (kWh)")
 
 cohaus_wide |> 
-  select(APT,EV,CS,HP,Gen) |> 
-  ggpairs(progress = FALSE)
-
-cohaus_wide |> 
-  select(Use,Gen,AT) |> 
-  ggpairs(progress = FALSE)
+  filter(month == "M01") |> 
+  select(Use,Gen,Tdry) |> 
+  ggpairs(progress = FALSE) +
+  labs(title = "Cohaus Pairs Plot for Use, Gen and DryBulbTemp for January")
 
 cohaus_wide |>
   group_by(year(dttm)) |> 

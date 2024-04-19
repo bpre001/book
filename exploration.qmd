@@ -1,22 +1,61 @@
 # Exploration
 
+```{r loadin, include=FALSE}
+
+library(tidyverse)
+library(readxl)
+library(fpp3)
+library(GGally)
+
+# read in cohaus_wide (painful wrangle is in separate wrangle.R)
+# 
+cohaus_wide <- read_rds("data/cohaus_wide.rds")
+
+
+
+
+#convert to tsibble
+#
+cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
+
+```
+
+
 In summary, this book has no content whatsoever.
 
 ```{r plots}
 
-cohaus_ts |>
-  ggplot(aes(x = hour(dttm), y = Gen)) +
-  geom_point(alpha = 0.1, col = "gold") +
-  facet_wrap(~month)
-  
-cohaus_ts |>
-  ggplot(aes(y = Use)) +
-  geom_histogram(alpha = 0.1, col = "blue") +
-  facet_wrap(~hour)  
+library(tidyverse)
+
 
 cohaus_ts |>
-  ggplot(aes(x = hour(dttm), y = Tdry)) +
-  geom_point(alpha = 0.05, col = "red") +
-  facet_grid(~month,scale = "fixed")  
+  ggplot(aes(x = hour(dttm), y = Gen)) +
+  geom_jitter(alpha = 0.1, col = "orange") +
+  stat_summary(fun = mean, geom = "line", col = "red") +
+  facet_wrap(~quarter, ncol = 2) +  
+  labs(title = "Cohaus Electricity Generation (kWh)")
+  
+cohaus_ts |>
+  ggplot(aes(x = Use, color = quarter)) +
+  geom_density(alpha = 0.1) +
+  facet_wrap(~workDay, ncol = 4, labeller = "label_both") +
+  labs(title = "Cohaus Electricity Usage Density (kWh)")
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = EV)) +
+  geom_jitter(alpha = 0.1, col = "green") +
+  labs(title = "Cohaus EV Electricity Use (kWh)")
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = APT)) +
+  geom_jitter(alpha = 0.1, col = "orange") +
+  facet_grid(quarter~workDay, labeller = "label_both") +
+  labs(title = "Cohaus Apartment Electricity Use (kWh)")
+
+cohaus_ts |>
+  ggplot(aes(x = hour(dttm), y = HP)) +
+  geom_jitter(alpha = 0.05, col = "red") +
+  facet_wrap(~quarter, ncol = 2) +
+  labs(title = "Cohaus Heat Pump Electricity Use (kWh)")
   
 ```
