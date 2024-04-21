@@ -11,22 +11,59 @@ library(GGally)
 # 
 cohaus_wide <- read_rds("data/cohaus_wide.rds")
 
-
-
-
 #convert to tsibble
 #
 cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
 
 ```
 
+## Time Series Display
 
-In summary, this book has no content whatsoever.
+Having cleaned the data, I have coerced to be a `tsibble` object and am using Hydman's `fpp3`package to explore the data.  
+
+The first three tome series displays are for the month of January 2022 and look at the hourly Usage, Generation and Net Usage for Cohaus.  The ACF plots for all three show a strong diurnal autocorrelation pattern.   
 
 ```{r plots}
 
 library(tidyverse)
 
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(Use, plot_type = "histogram") + 
+  labs(title = "Cohaus Electricity Usage for Jan 2022 (kWh)")
+
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(Gen, plot_type = "histogram") + 
+  labs(title = "Cohaus Electricity Generation for Jan 2022 (kWh)")
+
+cohaus_ts |> 
+  filter(dttm < dmy("01022022")) |>
+  gg_tsdisplay(NetUse, plot_type = "histogram") + 
+  labs(title = "Cohaus Electricity Net Usage",
+        subtitle = "January 2022")
+  
+```
+
+## Pairs Plot
+
+Again for the month of January 2024, I have created a pairs plot of Usage, Generation and Temperature (dry bulb).  There appears to be significant correlation between all three variables - which makes sense - we associate warm temperatures with sunshine (and hence generation) and residential energy consumption tends to happen during the day (in fact it peaks in the morning and evenings).
+
+```{r}
+
+cohaus_wide |> 
+  filter(month == "M01",
+         year == "Y2024") |> 
+  select(Use,Gen,AT) |> 
+  ggpairs(progress = FALSE) +
+  labs(title = "Cohaus Pairs Plot for Use, Gen and Temp",
+       subtitle = "January 2024")
+
+```
+
+## Electricity Generation
+
+```{r solar}
 
 cohaus_ts |>
   ggplot(aes(x = hour(dttm), y = Gen)) +
@@ -35,27 +72,48 @@ cohaus_ts |>
   facet_wrap(~quarter, ncol = 2) +  
   labs(title = "Cohaus Electricity Generation (kWh)")
   
+```
+
+```{r}
+
 cohaus_ts |>
   ggplot(aes(x = Use, color = quarter)) +
   geom_density(alpha = 0.1) +
   facet_wrap(~workDay, ncol = 4, labeller = "label_both") +
   labs(title = "Cohaus Electricity Usage Density (kWh)")
 
-cohaus_ts |>
-  ggplot(aes(x = hour(dttm), y = EV)) +
-  geom_jitter(alpha = 0.1, col = "green") +
-  labs(title = "Cohaus EV Electricity Use (kWh)")
+```
 
+## Electricity Usage
+
+Here we look at the components of Cohaus usage.  The common services (CS) are relatively constant throughout the day, whereas the apartment (APT) usage peaks in the morning and evening.  The EV charging (EV)  peaks in the evening.  The heat pump is used to centrally heat water that is utilised by each of the apartments at Cohaus.  Note that heat pump usage peaks in the morning and late afternoon as the centralised hot water is scheduled to come on each day and is well insulated between these times.
+
+
+```{r}
+
+cohaus_wide |>
+  pivot_longer(cols = c(APT,CS,EV,HP), 
+               names_to = "Measure",
+               values_to = "kWh") |>
+  ggplot(aes(x = yearmonth(dttm), y = kWh, fill = Measure)) +
+  geom_col()
+  
 cohaus_ts |>
   ggplot(aes(x = hour(dttm), y = APT)) +
   geom_jitter(alpha = 0.1, col = "orange") +
   facet_grid(quarter~workDay, labeller = "label_both") +
-  labs(title = "Cohaus Apartment Electricity Use (kWh)")
+  labs(title = "Cohaus APT Electricity Use (kWh)")
+
+cohaus_ts |> 
+  ggplot(aes(x = hour(dttm), y = EV)) +
+  geom_jitter(alpha = 0.1, col = "green") +
+  labs(title = "Cohaus EV Electricity Use (kWh)")
 
 cohaus_ts |>
   ggplot(aes(x = hour(dttm), y = HP)) +
   geom_jitter(alpha = 0.05, col = "red") +
   facet_wrap(~quarter, ncol = 2) +
   labs(title = "Cohaus Heat Pump Electricity Use (kWh)")
-  
+
 ```
+

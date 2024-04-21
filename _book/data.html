@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>STAT765 Assignment - 2&nbsp; Data</title>
+<title>STAT765 Assignment - 2&nbsp; Data Processing</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -103,6 +103,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -115,7 +144,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./data.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./data.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data Processing</span></a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
@@ -149,7 +178,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./data.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data</span></span></a>
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data Processing</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -170,12 +199,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
   </div>
 </li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./references.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">References</span></span></a>
-  </div>
-</li>
     </ul>
     </div>
 </nav>
@@ -188,6 +211,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#goal" id="toc-goal" class="nav-link active" data-scroll-target="#goal"><span class="header-section-number">2.1</span> Goal</a></li>
   <li><a href="#data-source" id="toc-data-source" class="nav-link" data-scroll-target="#data-source"><span class="header-section-number">2.2</span> Data Source</a></li>
+  <li><a href="#meteorological-data" id="toc-meteorological-data" class="nav-link" data-scroll-target="#meteorological-data"><span class="header-section-number">2.3</span> Meteorological Data</a></li>
+  <li><a href="#seasonal-dummy-variables" id="toc-seasonal-dummy-variables" class="nav-link" data-scroll-target="#seasonal-dummy-variables"><span class="header-section-number">2.4</span> Seasonal Dummy Variables</a></li>
   </ul>
 </nav>
     </div>
@@ -196,7 +221,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data</span></h1>
+<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data Processing</span></h1>
 </div>
 
 
@@ -219,75 +244,204 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="data-source" class="level2" data-number="2.2">
 <h2 data-number="2.2" class="anchored" data-anchor-id="data-source"><span class="header-section-number">2.2</span> Data Source</h2>
-<p>Cohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Half hourly kWh electricity use and generation measures are as follows:</p>
+<p>Cohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Hourly kWh electricity use and generation measures for the period from January 1, 2022 0:00 NZST through February 29, 2024 23:00 NZST inclusive are categorised follows:</p>
 <ul>
-<li><p><code>APT</code> aggregated apartment electricity use</p></li>
+<li><p><code>APT</code> aggregate apartment electricity use</p></li>
 <li><p><code>CS</code> common services (lighting, laundry, bike shed, garden house)</p></li>
 <li><p><code>EV</code> electric vehicle chargers</p></li>
 <li><p><code>HP</code> centralised hot water and heat pumps</p></li>
-<li><p><code>PV</code> photo-voltaic electricity generation</p></li>
+<li><p><code>Gen</code> photo-voltaic electricity generation</p></li>
 </ul>
-<p>Net energy use (i.e.&nbsp;drawn from the grid) is calculated by summing the five measures.</p>
-<div class="cell" data-messages="false">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="st">"01022022"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gg_tsdisplay</span>(Use, <span class="at">plot_type =</span> <span class="st">"histogram"</span>) <span class="sc">+</span> </span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Cohaus Electricity Usage for Jan 2022 (kWh)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="data_files/figure-html/plots-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="st">"01022022"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gg_tsdisplay</span>(Gen, <span class="at">plot_type =</span> <span class="st">"histogram"</span>) <span class="sc">+</span> </span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Cohaus Electricity Generation for Jan 2022 (kWh)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="data_files/figure-html/plots-2.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="st">"01022022"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gg_tsdisplay</span>(NetUse, <span class="at">plot_type =</span> <span class="st">"histogram"</span>) <span class="sc">+</span> </span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Cohaus Electricity Net Usage for Jan 2022 (kWh)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="data_files/figure-html/plots-3.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cohaus_wide <span class="sc">|&gt;</span> </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(month <span class="sc">==</span> <span class="st">"M01"</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Use,Gen,Tdry) <span class="sc">|&gt;</span> </span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggpairs</span>(<span class="at">progress =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Cohaus Pairs Plot for Use, Gen and DryBulbTemp for January"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="data_files/figure-html/plots-4.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>cohaus_wide <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">year</span>(dttm)) <span class="sc">|&gt;</span> </span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Use =</span> <span class="fu">sum</span>(Use),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">Gen =</span> <span class="fu">sum</span>(Gen),</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">Import =</span> <span class="fu">sum</span>(<span class="fu">pmax</span>(NetUse,<span class="dv">0</span>)),</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">Export =</span> <span class="fu">sum</span>(<span class="sc">-</span><span class="fu">pmin</span>(NetUse,<span class="dv">0</span>))</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            ) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Net energy use <code>NetUse</code> (i.e.&nbsp;pulled / (pushed) to the grid) is calculated by summing these five measures. Note in my wrangling, I have down-sampled to an hourly resolution.</p>
+<p>For each hourly period, if <code>NetUse</code> is positive, then Cohaus is <em>importing</em> electricity from the grid. If <code>NetUse</code> is negative, then Cohaus is <em>exporting</em> electricity to the grid. The difference between <code>Import</code> and <code>Export</code> is the <code>NetImport</code>. It is important to note that the Use/Gen and Import/Export measures are different for each time period due to the offset of use and generation within each period. This reflects the fact that depending on the hour of the day, Cohaus’ solar generation may be in deficit or surplus to the demand of the residents and there is no battery storage onsite, necessitating an import or export from the grid.</p>
+</section>
+<section id="meteorological-data" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="meteorological-data"><span class="header-section-number">2.3</span> Meteorological Data</h2>
+<p>Electricity Use and Generation at Cohaus is influenced by a number of meteorological factors. For example, heating when temperatures are below 20<span class="math inline">\(^{\circ}\)</span>C. I collected hourly meteorological data from CliFlo for the weather station at MOTAT (Auckland Museum of Transport and Technology) which is the closest to Cohaus. Meteorological data collected includes:</p>
+<ul>
+<li><code>Tdry</code> Dry-bulb Temperature (<span class="math inline">\({circ}\)</span>C)</li>
+<li><code>AT</code> Ambient Temperature (<span class="math inline">\({circ}\)</span>C)</li>
+<li><code>RH</code> Relative Humidity (%)</li>
+<li><code>Spd</code> Wind Speed (m/s)</li>
+</ul>
+</section>
+<section id="seasonal-dummy-variables" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="seasonal-dummy-variables"><span class="header-section-number">2.4</span> Seasonal Dummy Variables</h2>
+<p>I have created a number of boolean dummy variables to capture seasonal effects. These include:</p>
+<ul>
+<li><p>Year, Quarter, Month, Day, Week and Hour</p></li>
+<li><p><code>sunUp</code> determines whether observation time is between sunrise and sunset on that day. Times have been pulled from the <code>suncalc</code> package</p></li>
+<li><p><code>workDay</code> is TRUE if the observation is on a workday (Mon-Fri) and not an Auckland public holiday. Auckland public holidays are sourced from the NZ government’s MBIE website.</p></li>
+</ul>
+<p>$$ Summary Statistics</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(cohaus_wide)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 3 × 5
-  `year(dttm)`    Use    Gen Import Export
-         &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-1         2022 67027. 49749. 42824. 25546.
-2         2023 70023. 46400. 44407. 20784.
-3         2024  8613. 11935.  3904.  7226.</code></pre>
+<pre><code>      dttm                          APT               CS        
+ Min.   :2022-01-01 00:00:00   Min.   : 1.437   Min.   :0.1720  
+ 1st Qu.:2022-07-17 11:45:00   1st Qu.: 2.986   1st Qu.:0.2830  
+ Median :2023-01-30 23:30:00   Median : 4.520   Median :0.4136  
+ Mean   :2023-01-30 23:30:00   Mean   : 5.174   Mean   :0.5655  
+ 3rd Qu.:2023-08-16 11:15:00   3rd Qu.: 6.335   3rd Qu.:0.7350  
+ Max.   :2024-02-29 23:00:00   Max.   :26.585   Max.   :3.8398  
+                                                                
+       EV                HP                Gen               Use        
+ Min.   :0.01799   Min.   : 0.06398   Min.   : 0.0000   Min.   : 1.944  
+ 1st Qu.:0.04297   1st Qu.: 0.11800   1st Qu.: 0.0000   1st Qu.: 4.512  
+ Median :0.04398   Median : 0.12000   Median : 0.1826   Median : 6.853  
+ Mean   :0.50713   Mean   : 1.43564   Mean   : 5.7007   Mean   : 7.683  
+ 3rd Qu.:0.13081   3rd Qu.: 1.32455   3rd Qu.: 9.6382   3rd Qu.:10.063  
+ Max.   :7.26914   Max.   :10.95870   Max.   :44.8546   Max.   :32.294  
+                                                                        
+     NetUse            Import           Export         sunUp       workDay     
+ Min.   :-34.646   Min.   : 0.000   Min.   : 0.000   FALSE:9289   FALSE: 6120  
+ 1st Qu.: -1.727   1st Qu.: 0.000   1st Qu.: 0.000   TRUE :9671   TRUE :12840  
+ Median :  3.542   Median : 3.542   Median : 0.000                             
+ Mean   :  1.982   Mean   : 4.807   Mean   : 2.825                             
+ 3rd Qu.:  7.530   3rd Qu.: 7.530   3rd Qu.: 1.727                             
+ Max.   : 32.294   Max.   :32.294   Max.   :34.646                             
+                                                                               
+      Tdry             RH             Spd               AT         
+ Min.   : 2.00   Min.   : 30.0   Min.   : 0.000   Min.   :-0.2804  
+ 1st Qu.:13.60   1st Qu.: 69.0   1st Qu.: 1.400   1st Qu.:11.7558  
+ Median :16.70   Median : 82.0   Median : 2.800   Median :15.4950  
+ Mean   :16.56   Mean   : 79.9   Mean   : 2.948   Mean   :15.5094  
+ 3rd Qu.:19.90   3rd Qu.: 93.0   3rd Qu.: 4.200   3rd Qu.:19.5512  
+ Max.   :29.20   Max.   :100.0   Max.   :11.400   Max.   :29.4112  
+                                                                   
+      hour            week           month      quarter       year     
+ H00    :  790   W01    :  504   M01    :2232   Q01:5760   Y2022:8760  
+ H01    :  790   W02    :  504   M02    :2040   Q02:4368   Y2023:8760  
+ H02    :  790   W03    :  504   M03    :1488   Q03:4416   Y2024:1440  
+ H03    :  790   W04    :  504   M05    :1488   Q04:4416               
+ H04    :  790   W05    :  504   M07    :1488                          
+ H05    :  790   W06    :  504   M08    :1488                          
+ (Other):14220   (Other):15936   (Other):8736                          </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>yrsum <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">year</span>(dttm)) <span class="sc">|&gt;</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Use =</span> <span class="fu">sum</span>(Use),</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">Gen =</span> <span class="sc">-</span><span class="fu">sum</span>(Gen),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">NetUse =</span> <span class="fu">sum</span>(NetUse),</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">Import =</span> <span class="fu">sum</span>(Import),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">Export =</span> <span class="sc">-</span><span class="fu">sum</span>(Export)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">|&gt;</span> </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Yr =</span> <span class="st">`</span><span class="at">year(dttm)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">NetImport =</span> Import <span class="sc">+</span> Export) <span class="sc">|&gt;</span> </span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric) <span class="sc">&amp;</span> <span class="sc">!</span>Yr, <span class="sc">~</span> <span class="fu">round</span>(., <span class="at">digits =</span> <span class="dv">1</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 7
+     Yr    Use     Gen NetUse Import  Export NetImport
+  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;
+1  2022 67027  -49749. 17278. 42824. -25546.    17278.
+2  2023 70023. -46400. 23623. 44407  -20784.    23623.
+3  2024  8613. -11935. -3323.  3904.  -7226.    -3323.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qtrsum <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01012022</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>         dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01012023</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">yearquarter</span>(dttm)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Use =</span> <span class="fu">sum</span>(Use),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">Gen =</span> <span class="sc">-</span><span class="fu">sum</span>(Gen),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">NetUse =</span> <span class="fu">sum</span>(NetUse),</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">Import =</span> <span class="fu">sum</span>(Import),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">Export =</span> <span class="sc">-</span><span class="fu">sum</span>(Export)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">|&gt;</span> </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">YrQtr =</span> <span class="st">`</span><span class="at">yearquarter(dttm)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">NetImport =</span> Import <span class="sc">+</span> Export) <span class="sc">|&gt;</span> </span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric) <span class="sc">&amp;</span> <span class="sc">!</span>YrQtr, <span class="sc">~</span> <span class="fu">round</span>(., <span class="at">digits =</span> <span class="dv">1</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 7
+    YrQtr    Use     Gen NetUse Import  Export NetImport
+    &lt;qtr&gt;  &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;
+1 2022 Q1 13280. -17209. -3929.  6709. -10637.    -3929.
+2 2022 Q2 17386.  -8186.  9200. 12346.  -3147.     9200.
+3 2022 Q3 21030.  -8584. 12446  15375.  -2929.    12446 
+4 2022 Q4 15331. -15770   -439.  8394.  -8833.     -439.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>mthsum <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01042022</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>         dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01072022</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">yearmonth</span>(dttm)) <span class="sc">|&gt;</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Use =</span> <span class="fu">sum</span>(Use),</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">Gen =</span> <span class="sc">-</span><span class="fu">sum</span>(Gen),</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">NetUse =</span> <span class="fu">sum</span>(NetUse),</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">Import =</span> <span class="fu">sum</span>(Import),</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">Export =</span> <span class="sc">-</span><span class="fu">sum</span>(Export)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">|&gt;</span> </span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">YrMth =</span> <span class="st">`</span><span class="at">yearmonth(dttm)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">NetImport =</span> Import <span class="sc">+</span> Export) <span class="sc">|&gt;</span> </span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric) <span class="sc">&amp;</span> <span class="sc">!</span>YrMth, <span class="sc">~</span> <span class="fu">round</span>(., <span class="at">digits =</span> <span class="dv">1</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 7
+     YrMth   Use    Gen NetUse Import Export NetImport
+     &lt;mth&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+1 2022 Apr 4958. -3588.  1370.  3084. -1714.     1370.
+2 2022 May 5712. -2670.  3042.  4072. -1030.     3042.
+3 2022 Jun 6716. -1928   4788.  5191.  -403.     4788.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>daysum <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01042022</span>),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>         dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01052022</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">day</span>(dttm)) <span class="sc">|&gt;</span> </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Use =</span> <span class="fu">sum</span>(Use),</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">Gen =</span> <span class="sc">-</span><span class="fu">sum</span>(Gen),</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">NetUse =</span> <span class="fu">sum</span>(NetUse),</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">Import =</span> <span class="fu">sum</span>(Import),</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">Export =</span> <span class="sc">-</span><span class="fu">sum</span>(Export)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">|&gt;</span> </span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Day =</span> <span class="st">`</span><span class="at">day(dttm)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">NetImport =</span> Import <span class="sc">+</span> Export) <span class="sc">|&gt;</span> </span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric) <span class="sc">&amp;</span> <span class="sc">!</span>Day, <span class="sc">~</span> <span class="fu">round</span>(., <span class="at">digits =</span> <span class="dv">1</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 30 × 7
+     Day   Use    Gen NetUse Import Export NetImport
+   &lt;int&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+ 1     1  164. -137.    26.5   91    -64.5      26.5
+ 2     2  157. -136.    20.9   89.7  -68.7      20.9
+ 3     3  174. -154     20.1  107.   -86.7      20.1
+ 4     4  159. -108.    51.2  110.   -58.3      51.2
+ 5     5  156.  -64.2   92.2  109.   -17        92.2
+ 6     6  172. -124.    47.9  102.   -54.6      47.9
+ 7     7  180. -168.    12.6  106.   -93.3      12.6
+ 8     8  152. -116     36.5   92.3  -55.8      36.5
+ 9     9  164. -174.    -9.5   89.8  -99.3      -9.5
+10    10  165. -168.    -3.5   93.2  -96.6      -3.5
+# ℹ 20 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>hoursum <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01042022</span>),</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>         dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">02042022</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">hour</span>(dttm)) <span class="sc">|&gt;</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Use =</span> <span class="fu">sum</span>(Use),</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">Gen =</span> <span class="sc">-</span><span class="fu">sum</span>(Gen),</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">NetUse =</span> <span class="fu">sum</span>(NetUse),</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">Import =</span> <span class="fu">sum</span>(Import),</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">Export =</span> <span class="sc">-</span><span class="fu">sum</span>(Export)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">|&gt;</span> </span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Hour =</span> <span class="st">`</span><span class="at">hour(dttm)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">NetImport =</span> Import <span class="sc">+</span> Export) <span class="sc">|&gt;</span> </span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric) <span class="sc">&amp;</span> <span class="sc">!</span>Hour, <span class="sc">~</span> <span class="fu">round</span>(., <span class="at">digits =</span> <span class="dv">1</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 7
+    Hour   Use   Gen NetUse Import Export NetImport
+   &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+ 1     0   5.1   0      5.1    5.1      0       5.1
+ 2     1   4.3   0      4.3    4.3      0       4.3
+ 3     2   4.2   0      4.2    4.2      0       4.2
+ 4     3   4.1   0      4.1    4.1      0       4.1
+ 5     4  11.2   0     11.2   11.2      0      11.2
+ 6     5   3     0      3      3        0       3  
+ 7     6   3.1   0      3.1    3.1      0       3.1
+ 8     7   5.2  -0.1    5.1    5.1      0       5.1
+ 9     8   7.6  -2.1    5.5    5.5      0       5.5
+10     9   8.7  -6.1    2.6    2.6      0       2.6
+# ℹ 14 more rows</code></pre>
 </div>
 </div>
 

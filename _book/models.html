@@ -149,7 +149,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./data.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data</span></span></a>
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data Processing</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -168,12 +168,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./summary.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./references.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">References</span></span></a>
   </div>
 </li>
     </ul>
@@ -206,11 +200,207 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>In summary, this book has no content whatsoever.</p>
+<p>Having wrangled the data into an indexable, time series form, there are a three models that I would like to apply.</p>
+<p>The approach that I will take for modelling, predicting and simulating Cohaus Net Usage will be modelled using the hourly Net Usage data. By modelling Net Usage (rather than Use and Generation separately) we implicitly capture the correlation between the two sub models (and don’t have to assume independence).</p>
+<p>Time series models that I would like to consider include:</p>
+<p>To benchmark model performance, I would consider a seasonal daily naive model (<code>SNaive</code>) and a seasonal average model (<code>Saverage</code>). These models are simple and can be used to compare the performance of more complex models.</p>
+<p>More complex models to be built and analysed would include: 1. Linear Model (<code>LM</code>) - using a linear model to predict NetUse including a linear trend, seasonality (time of day, work day indicator, month), and exogeneous variates such as temperature. 2. Error-Trend-Seasonality (‘ETS’) - implement Holt and Winter’s model that incorporates seasonality. 3. Seasonal Auto Regressive Model with exogeneous variates (<code>SARx</code>) - a more complex model that includes seasonality, autoregression and exogeneous variates.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>fit_stl <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">stl =</span> <span class="fu">STL</span>(NetUse <span class="sc">~</span> </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">season</span>(<span class="at">period =</span> <span class="st">"day"</span>) <span class="sc">+</span> </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">season</span>(<span class="at">period =</span> <span class="st">"week"</span>) <span class="sc">+</span> </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">8761</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>) </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        ) </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit_stl <span class="sc">|&gt;</span> </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()<span class="sc">|&gt;</span> </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01012022</span>),</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>         dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01032024</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/stl-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_lm <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">lm =</span> <span class="fu">TSLM</span>(NetUse <span class="sc">~</span> hour <span class="sc">+</span> sunUp <span class="sc">+</span> workDay <span class="sc">+</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                    quarter <span class="sc">+</span> Tdry))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit_lm <span class="sc">|&gt;</span> <span class="fu">report</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2</code></pre>
+<pre><code>Series: NetUse 
+Model: TSLM 
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-23.10138  -2.96692   0.09185   2.91301  24.49282 
+
+Coefficients:
+             Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)   9.94530    0.32311  30.780  &lt; 2e-16 ***
+hourH01      -0.94969    0.26914  -3.529 0.000419 ***
+hourH02      -1.40010    0.26919  -5.201 2.00e-07 ***
+hourH03      -1.57421    0.26926  -5.846 5.11e-09 ***
+hourH04       5.20897    0.26934  19.340  &lt; 2e-16 ***
+hourH05      -2.03521    0.26938  -7.555 4.38e-14 ***
+hourH06      -1.67932    0.26980  -6.224 4.94e-10 ***
+hourH07      -0.12861    0.29383  -0.438 0.661603    
+hourH08      -2.02212    0.33423  -6.050 1.48e-09 ***
+hourH09      -5.68315    0.33441 -16.995  &lt; 2e-16 ***
+hourH10      -8.10874    0.33522 -24.189  &lt; 2e-16 ***
+hourH11     -10.20867    0.33621 -30.364  &lt; 2e-16 ***
+hourH12     -11.83191    0.33691 -35.118  &lt; 2e-16 ***
+hourH13     -12.74321    0.33729 -37.782  &lt; 2e-16 ***
+hourH14     -12.16183    0.33742 -36.044  &lt; 2e-16 ***
+hourH15      -9.06350    0.33715 -26.882  &lt; 2e-16 ***
+hourH16      -1.46496    0.33649  -4.354 1.35e-05 ***
+hourH17       2.77803    0.33559   8.278  &lt; 2e-16 ***
+hourH18       6.73448    0.29932  22.499  &lt; 2e-16 ***
+hourH19       6.13612    0.29130  21.065  &lt; 2e-16 ***
+hourH20       6.23636    0.27925  22.333  &lt; 2e-16 ***
+hourH21       5.59332    0.26940  20.762  &lt; 2e-16 ***
+hourH22       4.22788    0.26922  15.704  &lt; 2e-16 ***
+hourH23       1.94770    0.26914   7.237 4.77e-13 ***
+sunUpTRUE    -1.09955    0.19899  -5.526 3.33e-08 ***
+workDayTRUE  -0.25940    0.08317  -3.119 0.001818 ** 
+quarterQ02    3.63082    0.12750  28.476  &lt; 2e-16 ***
+quarterQ03    3.48923    0.14905  23.410  &lt; 2e-16 ***
+quarterQ04   -0.05826    0.11506  -0.506 0.612659    
+Tdry         -0.42896    0.01333 -32.177  &lt; 2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 5.349 on 18930 degrees of freedom
+Multiple R-squared: 0.6752, Adjusted R-squared: 0.6747
+F-statistic:  1357 on 29 and 18930 DF, p-value: &lt; 2.22e-16</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_lm <span class="sc">|&gt;</span> <span class="fu">gg_tsresiduals</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/lm-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">etsANA =</span> <span class="fu">ETS</span>(NetUse <span class="sc">~</span> <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span> </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                       <span class="fu">trend</span>(<span class="st">"N"</span>) <span class="sc">+</span> </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                       <span class="fu">season</span>(<span class="st">"A"</span>, <span class="at">period =</span> <span class="dv">24</span>))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                  </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01012023</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>           dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01042023</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/ETS-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"3 days"</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/ETS-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">augment</span>() <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">-</span>.model) <span class="sc">|&gt;</span> <span class="fu">tail</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 6 x 5 [1h] &lt;UTC&gt;
+  dttm                NetUse .fitted .resid .innov
+  &lt;dttm&gt;               &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+1 2024-02-29 18:00:00   4.10    9.00 -4.90  -4.90 
+2 2024-02-29 19:00:00   3.71    9.71 -6.00  -6.00 
+3 2024-02-29 20:00:00   7.70    8.37 -0.665 -0.665
+4 2024-02-29 21:00:00   6.46    9.04 -2.57  -2.57 
+5 2024-02-29 22:00:00   5.79    6.79 -0.996 -0.996
+6 2024-02-29 23:00:00   3.70    5.19 -1.49  -1.49 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_arx <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">lm =</span> <span class="fu">TSLM</span>(NetUse <span class="sc">~</span> <span class="fu">lag</span>(NetUse) <span class="sc">+</span> hour <span class="sc">+</span> sunUp <span class="sc">+</span> workDay <span class="sc">+</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                    quarter <span class="sc">+</span> Tdry))</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>fit_arx <span class="sc">|&gt;</span> <span class="fu">report</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: NetUse 
+Model: TSLM 
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-18.32296  -1.89075   0.00383   1.77611  26.30535 
+
+Coefficients:
+             Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)  1.299463   0.224481   5.789 7.20e-09 ***
+lag(NetUse)  0.744671   0.004908 151.720  &lt; 2e-16 ***
+hourH01      0.498249   0.181107   2.751  0.00594 ** 
+hourH02      0.742124   0.181440   4.090 4.33e-05 ***
+hourH03      0.894850   0.181671   4.926 8.48e-07 ***
+hourH04      7.790308   0.181788  42.854  &lt; 2e-16 ***
+hourH05     -4.526866   0.181768 -24.905  &lt; 2e-16 ***
+hourH06      1.008234   0.182165   5.535 3.16e-08 ***
+hourH07      0.991702   0.197572   5.019 5.23e-07 ***
+hourH08     -2.736324   0.224621 -12.182  &lt; 2e-16 ***
+hourH09     -4.696833   0.224780 -20.895  &lt; 2e-16 ***
+hourH10     -4.291837   0.226635 -18.937  &lt; 2e-16 ***
+hourH11     -4.487986   0.229024 -19.596  &lt; 2e-16 ***
+hourH12     -4.432555   0.231562 -19.142  &lt; 2e-16 ***
+hourH13     -4.059147   0.233734 -17.367  &lt; 2e-16 ***
+hourH14     -2.753721   0.235034 -11.716  &lt; 2e-16 ***
+hourH15     -0.019583   0.234239  -0.084  0.93337    
+hourH16      5.348112   0.230498  23.202  &lt; 2e-16 ***
+hourH17      4.005190   0.225623  17.752  &lt; 2e-16 ***
+hourH18      5.660898   0.201246  28.129  &lt; 2e-16 ***
+hourH19      2.044089   0.197589  10.345  &lt; 2e-16 ***
+hourH20      2.854723   0.188965  15.107  &lt; 2e-16 ***
+hourH21      2.765324   0.181990  15.195  &lt; 2e-16 ***
+hourH22      1.553279   0.181771   8.545  &lt; 2e-16 ***
+hourH23      0.271341   0.181195   1.498  0.13428    
+sunUpTRUE    1.201110   0.134535   8.928  &lt; 2e-16 ***
+workDayTRUE -0.066125   0.055890  -1.183  0.23677    
+quarterQ02   1.054536   0.087325  12.076  &lt; 2e-16 ***
+quarterQ03   0.969666   0.101500   9.553  &lt; 2e-16 ***
+quarterQ04  -0.081248   0.077300  -1.051  0.29323    
+Tdry        -0.120490   0.009183 -13.120  &lt; 2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 3.593 on 18928 degrees of freedom
+Multiple R-squared: 0.8534, Adjusted R-squared: 0.8532
+F-statistic:  3674 on 30 and 18928 DF, p-value: &lt; 2.22e-16</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_arx <span class="sc">|&gt;</span> <span class="fu">gg_tsresiduals</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
+(`geom_point()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
+(`stat_bin()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/arx-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
 </div>
 </div>
 

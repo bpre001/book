@@ -12,7 +12,6 @@ book:
     - exploration.qmd
     - models.qmd
     - summary.qmd
-    - references.qmd
 
 bibliography: references.bib
 

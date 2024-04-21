@@ -1,4 +1,4 @@
-# Data
+# Data Processing
 
 ```{r loadin, include=FALSE}
 
@@ -17,16 +17,15 @@ cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
 
 ```
 
-
 ## Goal
 
 The objective of this project is to produce 3-day forecasts of net energy use for the Cohaus residential development of 20 apartments at 11-13 Surrey Crescent, Grey Lynn, Auckland.
 
 ## Data Source
 
-Cohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Half hourly kWh electricity use and generation measures are as follows:
+Cohaus was completed in July 2021 and teh community moved in shortly thereafter,, Cohaus has installed solar generation capacity that is applied locally, and if any surplus remains is sold back to the electricity retailer. The data for this project has been collected from the residential development itself (of which the author is an owner-resident). Hourly kWh electricity use and generation measures for the period from January 1, 2022 0:00 NZST through February 29, 2024 23:00 NZST inclusive are categorised follows:
 
--   `APT` aggregated apartment electricity use
+-   `APT` aggregate apartment electricity use
 
 -   `CS` common services (lighting, laundry, bike shed, garden house)
 
@@ -34,43 +33,114 @@ Cohaus was completed in July 2021 and teh community moved in shortly thereafter,
 
 -   `HP` centralised hot water and heat pumps
 
--   `PV` photo-voltaic electricity generation
+-   `Gen` photo-voltaic electricity generation
 
-Net energy use (i.e. drawn from the grid) is calculated by summing the five measures.
+Net energy use `NetUse` (i.e. pulled / (pushed) to the grid) is calculated by summing these five measures. Note in my wrangling, I have down-sampled to an hourly resolution.
 
-```{r plots, messages = FALSE}
+For each hourly period, if `NetUse` is positive, then Cohaus is *importing* electricity from the grid. If `NetUse` is negative, then Cohaus is *exporting* electricity to the grid. The difference between `Import` and `Export` is the `NetImport`. It is important to note that the Use/Gen and Import/Export measures are different for each time period due to the offset of use and generation within each period. This reflects the fact that depending on the hour of the day, Cohaus' solar generation may be in deficit or surplus to the demand of the residents and there is no battery storage onsite, necessitating an import or export from the grid.
 
-cohaus_ts |> 
-  filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(Use, plot_type = "histogram") + 
-  labs(title = "Cohaus Electricity Usage for Jan 2022 (kWh)")
+## Meteorological Data
 
-cohaus_ts |> 
-  filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(Gen, plot_type = "histogram") + 
-  labs(title = "Cohaus Electricity Generation for Jan 2022 (kWh)")
+Electricity Use and Generation at Cohaus is influenced by a number of meteorological factors. For example, heating when temperatures are below 20$^{\circ}$C. I collected hourly meteorological data from CliFlo for the weather station at MOTAT (Auckland Museum of Transport and Technology) which is the closest to Cohaus. Meteorological data collected includes:
 
-cohaus_ts |> 
-  filter(dttm < dmy("01022022")) |>
-  gg_tsdisplay(NetUse, plot_type = "histogram") + 
-  labs(title = "Cohaus Electricity Net Usage for Jan 2022 (kWh)")
+-   `Tdry` Dry-bulb Temperature (${circ}$C)
+-   `AT` Ambient Temperature (${circ}$C)
+-   `RH` Relative Humidity (%)
+-   `Spd` Wind Speed (m/s)
 
-cohaus_wide |> 
-  filter(month == "M01") |> 
-  select(Use,Gen,Tdry) |> 
-  ggpairs(progress = FALSE) +
-  labs(title = "Cohaus Pairs Plot for Use, Gen and DryBulbTemp for January")
 
-cohaus_wide |>
+## Seasonal Dummy Variables
+
+I have created a number of boolean dummy variables to capture seasonal effects. These include:
+
+-   Year, Quarter, Month, Day, Week and Hour
+
+-   `sunUp` determines whether observation time is between sunrise and sunset on that day. Times have been pulled from the `suncalc` package
+
+-   `workDay` is TRUE if the observation is on a workday (Mon-Fri) and not an Auckland public holiday. Auckland public holidays are sourced from the NZ government's MBIE website.
+
+\$\$ Summary Statistics
+
+```{r summary_stats}
+
+summary(cohaus_wide)
+
+
+
+
+yrsum <- cohaus_wide |>
   group_by(year(dttm)) |> 
   summarise(Use = sum(Use),
-            Gen = sum(Gen),
-            Import = sum(pmax(NetUse,0)),
-            Export = sum(-pmin(NetUse,0))
-            ) 
-  
+            Gen = -sum(Gen),
+            NetUse = sum(NetUse),
+            Import = sum(Import),
+            Export = -sum(Export)
+            ) |> 
+  rename(Yr = `year(dttm)`) |>
+  mutate(NetImport = Import + Export) |> 
+  mutate(across(where(is.numeric) & !Yr, ~ round(., digits = 1))) |> 
+  print()
+
+qtrsum <- cohaus_wide |>
+  filter(dttm >= dmy(01012022),
+         dttm < dmy(01012023)) |> 
+  group_by(yearquarter(dttm)) |> 
+  summarise(Use = sum(Use),
+            Gen = -sum(Gen),
+            NetUse = sum(NetUse),
+            Import = sum(Import),
+            Export = -sum(Export)
+            ) |> 
+  rename(YrQtr = `yearquarter(dttm)`) |>
+  mutate(NetImport = Import + Export) |> 
+  mutate(across(where(is.numeric) & !YrQtr, ~ round(., digits = 1))) |> 
+  print()
+
+mthsum <- cohaus_wide |>
+  filter(dttm >= dmy(01042022),
+         dttm < dmy(01072022)) |> 
+  group_by(yearmonth(dttm)) |> 
+  summarise(Use = sum(Use),
+            Gen = -sum(Gen),
+            NetUse = sum(NetUse),
+            Import = sum(Import),
+            Export = -sum(Export)
+            ) |> 
+  rename(YrMth = `yearmonth(dttm)`) |>
+  mutate(NetImport = Import + Export) |> 
+  mutate(across(where(is.numeric) & !YrMth, ~ round(., digits = 1))) |> 
+  print()
+
+daysum <- cohaus_wide |>
+  filter(dttm >= dmy(01042022),
+         dttm < dmy(01052022)) |> 
+  group_by(day(dttm)) |> 
+  summarise(Use = sum(Use),
+            Gen = -sum(Gen),
+            NetUse = sum(NetUse),
+            Import = sum(Import),
+            Export = -sum(Export)
+            ) |> 
+  rename(Day = `day(dttm)`) |>
+  mutate(NetImport = Import + Export) |> 
+  mutate(across(where(is.numeric) & !Day, ~ round(., digits = 1))) |> 
+  print()
+
+hoursum <- cohaus_wide |>
+  filter(dttm >= dmy(01042022),
+         dttm < dmy(02042022)) |> 
+  group_by(hour(dttm)) |> 
+  summarise(Use = sum(Use),
+            Gen = -sum(Gen),
+            NetUse = sum(NetUse),
+            Import = sum(Import),
+            Export = -sum(Export)
+            ) |> 
+  rename(Hour = `hour(dttm)`) |>
+  mutate(NetImport = Import + Export) |> 
+  mutate(across(where(is.numeric) & !Hour, ~ round(., digits = 1))) |> 
+  print()
 
 ```
-
 
 

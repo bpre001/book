@@ -1,7 +1,92 @@
 # Models
 
-In summary, this book has no content whatsoever.
+```{r loadin, include=FALSE}
 
-```{r}
-1 + 1
+library(tidyverse)
+library(readxl)
+library(fpp3)
+library(GGally)
+
+# read in cohaus_wide (painful wrangle is in separate wrangle.R)
+# 
+cohaus_wide <- read_rds("data/cohaus_wide.rds")
+
+#convert to tsibble
+#
+cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
+
+```
+
+Having wrangled the data into an indexable, time series form, there are a three models that I would like to apply.
+
+The approach that I will take for modelling, predicting and simulating Cohaus Net Usage will be modelled using the hourly Net Usage data. By modelling Net Usage (rather than Use and Generation separately) we implicitly capture the correlation between the two sub models (and don't have to assume independence).
+
+Time series models that I would like to consider include:
+
+To benchmark model performance, I would consider a seasonal daily naive model (`SNaive`) and a seasonal average model (`Saverage`).  These models are simple and can be used to compare the performance of more complex models.
+
+More complex models to be built and analysed would include:
+1.  Linear Model (`LM`) - using a linear model to predict NetUse including a linear trend, seasonality (time of day, work day indicator, month), and exogeneous variates such as temperature.
+2.  Error-Trend-Seasonality ('ETS') - implement Holt and Winter's model that incorporates seasonality.
+3.  Seasonal Auto Regressive Model with exogeneous variates (`SARx`) - a more complex model that includes seasonality, autoregression and exogeneous variates. 
+
+```{r stl}
+
+fit_stl <- cohaus_ts |> 
+  model(stl = STL(NetUse ~ 
+                    season(period = "day") + 
+                    season(period = "week") + 
+                    trend(window = 8761), robust = TRUE) 
+        ) 
+
+fit_stl |> 
+  components()|> 
+  filter(dttm >= dmy(01012022),
+         dttm < dmy(01032024)) |> 
+  autoplot() 
+
+```
+
+```{r lm}
+
+fit_lm <- cohaus_ts |> 
+  model(lm = TSLM(NetUse ~ hour + sunUp + workDay +
+                    quarter + Tdry))
+        
+fit_lm |> report()
+
+fit_lm |> gg_tsresiduals()
+
+```
+
+```{r ETS}
+
+fit_ets <- cohaus_ts |> 
+  model(etsANA = ETS(NetUse ~ error("A") + 
+                       trend("N") + 
+                       season("A", period = 24))
+        )
+                  
+
+fit_ets |> components() |> 
+    filter(dttm >= dmy(01012023),
+           dttm < dmy(01042023)) |> 
+    autoplot()
+
+fit_ets |> forecast(h = "3 days") |> autoplot()
+
+fit_ets |> augment() |> select(-.model) |> tail()
+
+```
+
+```{r arx}
+
+fit_arx <- cohaus_ts |> 
+  model(lm = TSLM(NetUse ~ lag(NetUse) + hour + sunUp + workDay +
+                    quarter + Tdry))
+        
+fit_arx |> report()
+
+fit_arx |> gg_tsresiduals()
+
 ```
