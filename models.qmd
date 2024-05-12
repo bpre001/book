@@ -146,7 +146,7 @@ test |>
 
 ```
 
-This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_lasso),1)`% of the variance of the actual values in the test dataset, a slight improvement over the OLS Regression Model.  The Lasso Regression Model has the advantage of performing variable selection, which can be useful when there are many variables in the model.  However, in this case, the Lasso Regression Model has selected nearly all of the variables `hour`, `quarter`, `sunUp`, `workDay`, `Tdry`, and `RH` as important predictors of `NetUse`.
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_lasso),1)`% of the variance of the actual values in the test dataset, performing slightly worse than the OLS Regression Model.  The Lasso Regression Model has the advantage of performing variable selection, which can be useful when there are many variables in the model.  However, in this case, the Lasso Regression Model has selected nearly all of the variables `hour`, `quarter`, `sunUp`, `workDay`, `Tdry`, and `RH` as important predictors of `NetUse`.
 
 ## Lasso Regression with Interactions
 
@@ -212,7 +212,7 @@ test |>
 
 ```
 
-This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_ridge),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Lasso Regression Model.  The Ridge Regression Model has the advantage of being less sensitive to multicollinearity than the Lasso Regression Model.
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_ridge),1)`% of the variance of the actual values in the test dataset, turning in a very similar performance to the Lasso Regression Model.  The Ridge Regression Model has the advantage of being less sensitive to multicollinearity than the Lasso Regression Model.
 
 ## Pruned Regression Tree
 
@@ -264,7 +264,7 @@ test |>
 
 ```
 
-This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_pruned),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Lasso Regression Model.  The Pruned Regression Tree Model has the advantage of being interpretable and easy to understand.
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_pruned),1)`% of the variance of the actual values in the test dataset, one of the better predictive performances so far.  The Pruned Regression Tree Model has the advantage of being interpretable and easy to understand.
 
 ## Random Forest
 
@@ -297,7 +297,7 @@ test |>
 
 ```
 
-This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_forest),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Pruned Regression Tree Model.  The Random Forest Model has the advantage of being less sensitive to overfitting than the Pruned Regression Tree Model.
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_forest),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Pruned Regression Tree Model.  The Random Forest Model has the advantage of being less sensitive to overfitting than the Pruned Regression Tree Model.  The Random Forest Model is also able to model non-linear relationships between the predictors and the response variable.  The scaled variable importance output shows that `hour`, `RH`, `Tdry`, `sunUp`, `quarter`and `workDay` are the most-to-least significant predictors of `NetUse`.
 
 ## XGBoost
 
@@ -362,7 +362,7 @@ test_ts |>
 
 ```
 
-This ETS Model has a mean squared error of `r round(mse_pct(test_ts$NetUse, yhat_ets),1)`% of the variance of the actual values in the test dataset, permornimg much worse that all of the models presented so far.
+This ETS Model has a mean squared error of `r round(mse_pct(test_ts$NetUse, yhat_ets),1)`% of the variance of the actual values in the test dataset, permornimg much worse that all of the models presented so far.  In effect, it is an even simpler version of the Seasonal Average Model, only modelling daily periodicity.
 
 ## ARIMAx
 
@@ -399,7 +399,7 @@ test |>
 
 ```
 
-This ARIMAx Model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_arimax),1)`% of the variance of the actual values in the test dataset, and is fighting for the wooden spoon along with the ETS Model.  The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are).  Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.
+This ARIMAx Model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_arimax),1)`% of the variance of the actual values in the test dataset, and is the worst performing predictive model presented so far.  The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are).  Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.
 
 ## Summary of Results
 

@@ -456,7 +456,7 @@ quarterQ04  -0.41333328</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mse_pct(test$NetUse, yhat_lasso)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This model has a mean squared error of 30% of the variance of the actual values in the test dataset, a slight improvement over the OLS Regression Model. The Lasso Regression Model has the advantage of performing variable selection, which can be useful when there are many variables in the model. However, in this case, the Lasso Regression Model has selected nearly all of the variables <code>hour</code>, <code>quarter</code>, <code>sunUp</code>, <code>workDay</code>, <code>Tdry</code>, and <code>RH</code> as important predictors of <code>NetUse</code>.</p>
+<p>This model has a mean squared error of 30% of the variance of the actual values in the test dataset, performing slightly worse than the OLS Regression Model. The Lasso Regression Model has the advantage of performing variable selection, which can be useful when there are many variables in the model. However, in this case, the Lasso Regression Model has selected nearly all of the variables <code>hour</code>, <code>quarter</code>, <code>sunUp</code>, <code>workDay</code>, <code>Tdry</code>, and <code>RH</code> as important predictors of <code>NetUse</code>.</p>
 </section>
 <section id="lasso-regression-with-interactions" class="level2" data-number="4.4">
 <h2 data-number="4.4" class="anchored" data-anchor-id="lasso-regression-with-interactions"><span class="header-section-number">4.4</span> Lasso Regression with Interactions</h2>
@@ -585,7 +585,7 @@ quarterQ04  -0.67483024</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mse_pct(test$NetUse, yhat_ridge)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This model has a mean squared error of 30.4% of the variance of the actual values in the test dataset, a slight improvement over the Lasso Regression Model. The Ridge Regression Model has the advantage of being less sensitive to multicollinearity than the Lasso Regression Model.</p>
+<p>This model has a mean squared error of 30.4% of the variance of the actual values in the test dataset, turning in a very similar performance to the Lasso Regression Model. The Ridge Regression Model has the advantage of being less sensitive to multicollinearity than the Lasso Regression Model.</p>
 </section>
 <section id="pruned-regression-tree" class="level2" data-number="4.6">
 <h2 data-number="4.6" class="anchored" data-anchor-id="pruned-regression-tree"><span class="header-section-number">4.6</span> Pruned Regression Tree</h2>
@@ -659,7 +659,7 @@ quarterQ04  -0.67483024</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mse_pct(test$NetUse, yhat_pruned)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This model has a mean squared error of 22.9% of the variance of the actual values in the test dataset, a slight improvement over the Lasso Regression Model. The Pruned Regression Tree Model has the advantage of being interpretable and easy to understand.</p>
+<p>This model has a mean squared error of 22.9% of the variance of the actual values in the test dataset, one of the better predictive performances so far. The Pruned Regression Tree Model has the advantage of being interpretable and easy to understand.</p>
 </section>
 <section id="random-forest" class="level2" data-number="4.7">
 <h2 data-number="4.7" class="anchored" data-anchor-id="random-forest"><span class="header-section-number">4.7</span> Random Forest</h2>
@@ -714,7 +714,7 @@ R squared (OOB):                  0.834429 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mse_pct(test$NetUse, yhat_forest)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This model has a mean squared error of 21.5% of the variance of the actual values in the test dataset, a slight improvement over the Pruned Regression Tree Model. The Random Forest Model has the advantage of being less sensitive to overfitting than the Pruned Regression Tree Model.</p>
+<p>This model has a mean squared error of 21.5% of the variance of the actual values in the test dataset, a slight improvement over the Pruned Regression Tree Model. The Random Forest Model has the advantage of being less sensitive to overfitting than the Pruned Regression Tree Model. The Random Forest Model is also able to model non-linear relationships between the predictors and the response variable. The scaled variable importance output shows that <code>hour</code>, <code>RH</code>, <code>Tdry</code>, <code>sunUp</code>, <code>quarter</code>and <code>workDay</code> are the most-to-least significant predictors of <code>NetUse</code>.</p>
 </section>
 <section id="xgboost" class="level2" data-number="4.8">
 <h2 data-number="4.8" class="anchored" data-anchor-id="xgboost"><span class="header-section-number">4.8</span> XGBoost</h2>
@@ -843,7 +843,7 @@ Model: ETS(A,N,A)
 </div>
 <div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mse_pct(test_ts$NetUse, yhat_ets)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This ETS Model has a mean squared error of 49.9% of the variance of the actual values in the test dataset, permornimg much worse that all of the models presented so far.</p>
+<p>This ETS Model has a mean squared error of 49.9% of the variance of the actual values in the test dataset, permornimg much worse that all of the models presented so far. In effect, it is an even simpler version of the Seasonal Average Model, only modelling daily periodicity.</p>
 </section>
 <section id="arimax" class="level2" data-number="4.10">
 <h2 data-number="4.10" class="anchored" data-anchor-id="arimax"><span class="header-section-number">4.10</span> ARIMAx</h2>
@@ -897,7 +897,7 @@ AIC=81937.94   AICc=81937.96   BIC=82021.82</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co"># mse_pct(test$NetUse, yhat_arimax)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This ARIMAx Model has a mean squared error of 56% of the variance of the actual values in the test dataset, and is fighting for the wooden spoon along with the ETS Model. The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are). Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.</p>
+<p>This ARIMAx Model has a mean squared error of 56% of the variance of the actual values in the test dataset, and is the worst performing predictive model presented so far. The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are). Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.</p>
 </section>
 <section id="summary-of-results" class="level2" data-number="4.11">
 <h2 data-number="4.11" class="anchored" data-anchor-id="summary-of-results"><span class="header-section-number">4.11</span> Summary of Results</h2>
