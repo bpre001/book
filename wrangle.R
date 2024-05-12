@@ -103,10 +103,6 @@ isSunUp <- function(x) {
          1,0)
 }
 
-now() |> force_tz(tzone = "UTC")
-
-isSunUp(now()+hours(12))
-
 sunUp <- cohaus_wide$dttm |> 
   map_lgl(isSunUp)
 
@@ -186,6 +182,30 @@ cohaus_wide <- cohaus_wide |>
          quarter = as_factor(quarter),
          year = as_factor(year)
          ) 
+
+# New Zealand observes daylight saving from the last Sunday in 
+# September to the first Sunday in April.  I'm going to create
+# some dummy variables for peak, shoulder and offpeak times:
+# OP: [23:00 - 07:00) # given all in standard time (no dst)
+# P1: [07:00 - 09:30) # need to decrement one hour during summer
+# S1: [09:30 - 17:30)
+# P2: [17:30 - 20:00)
+# S2: [20:00 - 23:00)
+
+cohaus_wide <- cohaus_wide |> 
+  mutate(dst = ifelse(month(dttm) %in% 4:9, 0, 1),
+         hourdst = (hour(dttm)-dst) %% 24,
+         block = as.factor(case_when(
+           hourdst >= 0 & hourdst < 7 ~ "OP",
+           hourdst >= 7 & hourdst < 10 ~ "P1",
+           hourdst >= 10 & hourdst < 17 ~ "S1",
+           hourdst >= 17 & hourdst < 20 ~ "P2",
+           hourdst >= 20 & hourdst < 23 ~ "S2",
+           hourdst >= 23 & hourdst < 24 ~ "OP"))
+  ) |> 
+  select(-c(dst,hourdst))
+
+
 
 # check for NAs
 # 

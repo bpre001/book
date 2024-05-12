@@ -1,0 +1,148 @@
+# Time Series Models
+
+```{r loadin, include=FALSE}
+
+library(tidyverse)
+library(readxl)
+library(fpp3)
+library(GGally)
+library(glmnet)
+library(rpart)
+library(ranger)
+
+# read in cohaus_wide (painful wrangle is in separate wrangle.R)
+# source("wrangle.R")
+
+cohaus_wide <- read_rds("data/cohaus_wide.rds")|> 
+  select(dttm, NetUse,sunUp,workDay,
+         Tdry,RH,hour,quarter)
+
+#convert to tsibble
+
+cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
+
+```
+
+Having wrangled the data , I have converted into a tsibble and I am ready to apply time series models - these are for comparison with the machine learning models already applied. A key restriction of time series models is that they are sequential and so I have to split the train and test data differently.
+
+```{r train_test}
+
+set.seed(123)
+
+train_ts <- cohaus_ts |> 
+  slice_head(prop = 0.8)
+
+test_ts <- cohaus_ts |> 
+  slice_tail(n = nrow(cohaus_ts) - nrow(train))
+
+dim(train_ts); dim(test_ts); dim(cohaus_ts)
+
+mse_pct <- function(actual, predicted) {
+  100 * mean((actual - predicted)^2) / var(actual)
+}
+
+```
+
+# Fit a Seasonal ETS Model
+
+```{r ets}
+
+fit_ets <- train_ts |> 
+  model(ETS(NetUse ~ error("A") + trend("N") + season("A")))
+
+fit_ets |> report()
+
+yhat_ets <- fit_ets |> forecast(h = nrow(test_ts)) |> as_tibble() |> pull(.mean)
+
+test_ts |> 
+  ggplot(aes(y = NetUse, x = yhat_ets)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Seasonal ETS Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test_ts$NetUse, yhat_ets)
+
+```
+
+# Fit a Seasonal Average Model
+
+```{r avg}
+
+avg <- train |> 
+  group_by(hour,quarter) |> 
+  summarise(avg = mean(NetUse))
+
+yhat_avg <- test |> 
+  left_join(avg, by = c("hour", "quarter")) |> pull(avg)
+  
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_avg)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Seasonal Average Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_avg)
+
+
+```
+
+
+
+# Fit an ARIMAx Model
+
+```{r arimax}
+
+# fit arimax model with exogenous variables, let fabletools find best pdqs
+# fit_arimax <- train_ts |> 
+#   model(ARIMA(NetUse ~ xreg(sunUp + workDay + Tdry + RH)))
+# 
+# fit_arimax |> report()
+# 
+
+fit_arimax <- train_ts |> 
+  model(ARIMA(NetUse ~ pdq(1,0,3) + PDQ(2,1,0) + xreg(sunUp + workDay + Tdry + RH)))
+
+fit_arimax |> report()
+
+newdata <- test_ts |> 
+  select(dttm, hour, quarter, Tdry, RH, sunUp, workDay) |> 
+  as_tsibble(index = dttm)
+
+yhat_arimax <- fit_arimax |> forecast(newdata) |> as_tibble() |> pull(.mean)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_arimax)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "ARIMAx Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_arimax)
+
+```
+
+# Results
+
+```{r results}
+
+results <- tibble(model = c("OLS Regression", "Lasso Regression", "Pruned Regression Tree", "Random Forest", "XGBoost", "Lasso Regression with Interactions", "Ridge Regression"),
+                   mse_pct = c(mse_pct(test$NetUse, yhat_ols),
+                               mse_pct(test$NetUse, yhat_lasso),
+                               mse_pct(test$NetUse, yhat_pruned),
+                               mse_pct(test$NetUse, yhat_forest),
+                               mse_pct(test$NetUse, yhat_xgb),
+                               mse_pct(test$NetUse, yhat_lasso_int),
+                               mse_pct(test$NetUse, yhat_ridge))) |> 
+  mutate(mse_pct = round(mse_pct, 2)) |> 
+  arrange(mse_pct) |> 
+  print()
+
+```

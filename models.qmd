@@ -6,87 +6,411 @@ library(tidyverse)
 library(readxl)
 library(fpp3)
 library(GGally)
+library(glmnet)
+library(rpart)
+library(ranger)
 
 # read in cohaus_wide (painful wrangle is in separate wrangle.R)
-# 
-cohaus_wide <- read_rds("data/cohaus_wide.rds")
+# source("wrangle.R")
+
+cohaus_wide <- read_rds("data/cohaus_wide.rds")|> 
+  select(dttm, NetUse,sunUp,workDay,
+         Tdry,RH,hour,quarter)
 
 #convert to tsibble
 #
-cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
+#cohaus_ts <- cohaus_wide |> as_tsibble(index = dttm)
 
 ```
 
-Having wrangled the data into an indexable, time series form, there are a three models that I would like to apply.
+```{r train_test}
 
-The approach that I will take for modelling, predicting and simulating Cohaus Net Usage will be modelled using the hourly Net Usage data. By modelling Net Usage (rather than Use and Generation separately) we implicitly capture the correlation between the two sub models (and don't have to assume independence).
+set.seed(123)
+#test <- cohaus_wide |> sample_frac(0.2)
+#train <- anti_join(cohaus_wide, test, by = "dttm")
 
-Time series models that I would like to consider include:
+train <- cohaus_wide |> 
+  slice_head(prop = 0.8)
 
-To benchmark model performance, I would consider a seasonal daily naive model (`SNaive`) and a seasonal average model (`Saverage`).  These models are simple and can be used to compare the performance of more complex models.
+test <- cohaus_wide |> 
+  slice_tail(n = nrow(cohaus_wide) - nrow(train))
 
-More complex models to be built and analysed would include:
-1.  Linear Model (`LM`) - using a linear model to predict NetUse including a linear trend, seasonality (time of day, work day indicator, month), and exogeneous variates such as temperature.
-2.  Error-Trend-Seasonality ('ETS') - implement Holt and Winter's model that incorporates seasonality.
-3.  Seasonal Auto Regressive Model with exogeneous variates (`SARx`) - a more complex model that includes seasonality, autoregression and exogeneous variates. 
+train_ts <- train |> as_tsibble(index = dttm)
+test_ts <- test |> as_tsibble(index = dttm)
 
-```{r stl}
+train <- train |> select(-dttm)
+test <- test |> select(-dttm)
 
-fit_stl <- cohaus_ts |> 
-  model(stl = STL(NetUse ~ 
-                    season(period = "day") + 
-                    season(period = "week") + 
-                    trend(window = 8761), robust = TRUE) 
-        ) 
+dim(train); dim(test)
 
-fit_stl |> 
-  components()|> 
-  filter(dttm >= dmy(01012022),
-         dttm < dmy(01032024)) |> 
-  autoplot() 
 
-```
-
-```{r lm}
-
-fit_lm <- cohaus_ts |> 
-  model(lm = TSLM(NetUse ~ hour + sunUp + workDay +
-                    quarter + Tdry))
-        
-fit_lm |> report()
-
-fit_lm |> gg_tsresiduals()
+## Function to determine Mean Squared Error as Percentage of Variance
+ 
+mse_pct <- function(actual, predicted) {
+  100 * mean((actual - predicted)^2) / var(actual)
+}
 
 ```
 
-```{r ETS}
+## Seasonal Average
 
-fit_ets <- cohaus_ts |> 
-  model(etsANA = ETS(NetUse ~ error("A") + 
-                       trend("N") + 
-                       season("A", period = 24))
-        )
-                  
+Probably the simplest model to implement is a seasonal average model. This model calculates the arithmetic mean of NetUse by quarter and hour and applies this as our prediction of net energy consumption for our test data set.
 
-fit_ets |> components() |> 
-    filter(dttm >= dmy(01012023),
-           dttm < dmy(01042023)) |> 
-    autoplot()
 
-fit_ets |> forecast(h = "3 days") |> autoplot()
+```{r avg}
 
-fit_ets |> augment() |> select(-.model) |> tail()
+avg <- train |> 
+  group_by(quarter,hour) |> 
+  summarise(avg = mean(NetUse), .groups = "rowwise")
+
+avg |> mutate(avg = round(avg,2)) |> 
+  pivot_wider(names_from = quarter, values_from = avg) |> 
+  print()
+
+yhat_avg <- test |> 
+  left_join(avg, by = c("hour", "quarter")) |> pull(avg)
+  
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_avg)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Seasonal Average Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_avg)
+
 
 ```
 
-```{r arx}
+## OLS Linear Regression
 
-fit_arx <- cohaus_ts |> 
-  model(lm = TSLM(NetUse ~ lag(NetUse) + hour + sunUp + workDay +
-                    quarter + Tdry))
-        
-fit_arx |> report()
+```{r ols}
 
-fit_arx |> gg_tsresiduals()
+ols <- lm(NetUse ~ ., data = train)
+
+summary(ols)
+
+yhat_ols <- predict(ols, newdata = test)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_ols)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "OLS Regression Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_ols)
 
 ```
+## Lasso Regression 
+
+```{r lasso}
+
+train_modelframe <- model.frame(NetUse ~ ., data = train)
+train_X <- model.matrix(NetUse ~ ., data = train_modelframe)
+dim(train_X)
+
+test_modelframe <- model.frame(NetUse ~ ., data = test)
+test_X <- model.matrix(NetUse ~ ., data = test_modelframe)
+dim(test_X)
+
+suppressMessages(library(glmnet))
+
+lasso_cv <- cv.glmnet(train_X, train$NetUse)
+plot(lasso_cv)
+
+lasso <- glmnet(train_X, train$NetUse, lambda = lasso_cv$lambda.1se)
+
+predict(lasso, type = "coef")
+
+yhat_lasso <- predict(lasso, newx = test_X)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_lasso)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Lasso Regression Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_lasso)
+
+```
+
+## Lasso Regression with Interactions
+
+```{r lasso_int}
+
+intformula <- NetUse ~ (hour + quarter) * 
+                        (sunUp + workDay + Tdry + RH)
+
+train_modelframe <- model.frame(intformula, data = train)
+train_X_int <- model.matrix(intformula, train_modelframe)
+dim(train_X_int)
+
+test_modelframe <- model.frame(intformula, data = test)
+test_X_int <- model.matrix(intformula, test_modelframe)
+dim(test_X_int)
+
+cv_lasso_int <- cv.glmnet(train_X_int, train$NetUse)
+plot(cv_lasso_int)
+
+lasso_int <- glmnet(train_X_int, train$NetUse, lambda = cv_lasso_int$lambda.1se)
+
+yhat_lasso_int <- predict(lasso_int, newx = test_X_int)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_lasso_int)) +
+  geom_jitter(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Lasso with Interactions Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_lasso_int)
+
+```
+
+## Ridge Regression
+
+```{r ridge}
+
+fit <- glmnet(train_X, train$NetUse, alpha = 0) # alpha = 0 for ridge
+plot(fit)
+
+xval <- cv.glmnet(train_X, train$NetUse, alpha = 0)
+plot(xval)
+
+coef(fit, s = xval$lambda.1se)
+
+yhat_ridge <- predict(fit, newx = test_X, s = xval$lambda.1se)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_lasso)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Ridge Regression Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_ridge)
+
+```
+
+## Regression Tree
+
+```{r regression_tree}
+
+tree <- rpart(NetUse ~ ., 
+              data = train,
+              control = rpart.control(cp = 0.0001))
+
+cptable <- as_tibble(tree$cptable)
+
+x1se <- cptable |> 
+  mutate(x1se = xerror + xstd) |>
+  filter(xerror == min(xerror)) |>
+  pull(x1se)
+
+cp_1se <- cptable |>
+  filter(xerror < x1se) |>
+  filter(xerror == max(xerror))
+
+cp_1se
+
+cptable |> 
+  ggplot(aes(x = nsplit, y = xerror)) +
+  geom_line() +
+  geom_point() +
+  geom_vline(xintercept = cp_1se$nsplit, color = "red") +
+  labs(title = "Cost Complexity Pruning",
+       x = "Number of Splits",
+       y = "Cross-Validation Error") +
+  theme_bw()
+
+prune_tree <- prune(tree, cp = cp_1se$CP)
+
+head(prune_tree$cptable)
+
+yhat_pruned <- predict(prune_tree, test, type = "vector")
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_pruned)) +
+  geom_jitter(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Pruned Regression Tree Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_pruned)
+
+```
+
+## Random Forest
+
+```{r random_forest}
+
+suppressMessages(library(ranger))
+try(forest <- ranger(NetUse ~ ., 
+                     data = train,
+                     num.trees = 1000,
+                     mtry = 2,
+                     importance = "impurity")
+    )
+
+forest
+
+sort(forest$variable.importance, decreasing = TRUE)/sum(forest$variable.importance)
+
+yhat_forest <- predict(forest, test, type = "response")$predictions
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_forest)) +
+  geom_jitter(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Random Forest Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_forest)
+
+```
+
+## XGBoost
+
+```{r xgboost}
+
+suppressMessages(library(xgboost))
+
+xgb_cv <- xgb.cv(data = train_X, 
+                 label = train$NetUse, 
+                 nrounds = 500, 
+                 nfold = 10,
+                 eta = 0.1,
+                 early_stopping_rounds = 10,
+                 objective = "reg:squarederror", 
+                 print_every_n = 10)
+
+xgb <- xgboost(data = train_X, 
+               label = train$NetUse, 
+               nrounds = xgb_cv$best_iteration, 
+               eta = 0.1,
+               objective = "reg:squarederror")
+
+yhat_xgb <- predict(xgb, newdata = test_X)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_pruned)) +
+  geom_jitter(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "XGBoost Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_xgb)
+
+```
+
+
+
+## Seasonal ETS
+
+```{r ets}
+
+fit_ets <- train_ts |> 
+  model(ETS(NetUse ~ error("A") + trend("N") + season("A")))
+
+fit_ets |> report()
+
+yhat_ets <- fit_ets |> forecast(h = nrow(test_ts)) |> as_tibble() |> pull(.mean)
+
+test_ts |> 
+  ggplot(aes(y = NetUse, x = yhat_ets)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "Seasonal ETS Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test_ts$NetUse, yhat_ets)
+
+```
+
+## ARIMAx
+
+```{r arimax}
+
+# fit arimax model with exogenous variables, let fabletools find best pdqs
+# fit_arimax <- train_ts |> 
+#   model(ARIMA(NetUse ~ xreg(sunUp + workDay + Tdry + RH)))
+# 
+# fit_arimax |> report()
+# 
+
+fit_arimax <- train_ts |> 
+  model(ARIMA(NetUse ~ pdq(1,0,3) + PDQ(2,1,0) + xreg(sunUp + workDay + Tdry + RH)))
+
+fit_arimax |> report()
+
+newdata <- test_ts |> 
+  select(dttm, hour, quarter, Tdry, RH, sunUp, workDay) |> 
+  as_tsibble(index = dttm)
+
+yhat_arimax <- fit_arimax |> forecast(newdata) |> as_tibble() |> pull(.mean)
+
+test |> 
+  ggplot(aes(y = NetUse, x = yhat_arimax)) +
+  geom_point(alpha = 0.1, color = "blue") +
+  geom_abline(color = "black") +
+  theme_bw() +
+  labs(title = "ARIMAx Model",
+       x = "Predicted",
+       y = "Actual")
+
+mse_pct(test$NetUse, yhat_arimax)
+
+```
+
+## Summary of Results
+
+```{r results}
+
+results <- tibble(Model = c("Seasonal Average",
+                            "OLS Regression", 
+                            "Lasso Regression", 
+                            "Pruned Regression Tree", 
+                            "Random Forest", 
+                            "XGBoost", 
+                            "Lasso Regression with Interactions", 
+                            "Ridge Regression",
+                            "Seasonal ETS",
+                            "ARIMAx"),
+                   mse_pct = c(mse_pct(test$NetUse, yhat_avg),
+                               mse_pct(test$NetUse, yhat_ols),
+                               mse_pct(test$NetUse, yhat_lasso),
+                               mse_pct(test$NetUse, yhat_pruned),
+                               mse_pct(test$NetUse, yhat_forest),
+                               mse_pct(test$NetUse, yhat_xgb),
+                               mse_pct(test$NetUse, yhat_lasso_int),
+                               mse_pct(test$NetUse, yhat_ridge),
+                               mse_pct(test_ts$NetUse, yhat_ets),
+                               mse_pct(test$NetUse, yhat_arimax))
+                  ) |> 
+  mutate(mse_pct = round(mse_pct, 2)) |> 
+  arrange(mse_pct) |> 
+  print()
+
+```
+
+

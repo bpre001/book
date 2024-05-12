@@ -176,7 +176,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#seasonal-average" id="toc-seasonal-average" class="nav-link active" data-scroll-target="#seasonal-average"><span class="header-section-number">4.1</span> Seasonal Average</a></li>
+  <li><a href="#ols-linear-regression" id="toc-ols-linear-regression" class="nav-link" data-scroll-target="#ols-linear-regression"><span class="header-section-number">4.2</span> OLS Linear Regression</a></li>
+  <li><a href="#lasso-regression" id="toc-lasso-regression" class="nav-link" data-scroll-target="#lasso-regression"><span class="header-section-number">4.3</span> Lasso Regression</a></li>
+  <li><a href="#lasso-regression-with-interactions" id="toc-lasso-regression-with-interactions" class="nav-link" data-scroll-target="#lasso-regression-with-interactions"><span class="header-section-number">4.4</span> Lasso Regression with Interactions</a></li>
+  <li><a href="#ridge-regression" id="toc-ridge-regression" class="nav-link" data-scroll-target="#ridge-regression"><span class="header-section-number">4.5</span> Ridge Regression</a></li>
+  <li><a href="#regression-tree" id="toc-regression-tree" class="nav-link" data-scroll-target="#regression-tree"><span class="header-section-number">4.6</span> Regression Tree</a></li>
+  <li><a href="#random-forest" id="toc-random-forest" class="nav-link" data-scroll-target="#random-forest"><span class="header-section-number">4.7</span> Random Forest</a></li>
+  <li><a href="#xgboost" id="toc-xgboost" class="nav-link" data-scroll-target="#xgboost"><span class="header-section-number">4.8</span> XGBoost</a></li>
+  <li><a href="#seasonal-ets" id="toc-seasonal-ets" class="nav-link" data-scroll-target="#seasonal-ets"><span class="header-section-number">4.9</span> Seasonal ETS</a></li>
+  <li><a href="#arimax" id="toc-arimax" class="nav-link" data-scroll-target="#arimax"><span class="header-section-number">4.10</span> ARIMAx</a></li>
+  <li><a href="#summary-of-results" id="toc-summary-of-results" class="nav-link" data-scroll-target="#summary-of-results"><span class="header-section-number">4.11</span> Summary of Results</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -200,211 +216,871 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>Having wrangled the data into an indexable, time series form, there are a three models that I would like to apply.</p>
-<p>The approach that I will take for modelling, predicting and simulating Cohaus Net Usage will be modelled using the hourly Net Usage data. By modelling Net Usage (rather than Use and Generation separately) we implicitly capture the correlation between the two sub models (and don’t have to assume independence).</p>
-<p>Time series models that I would like to consider include:</p>
-<p>To benchmark model performance, I would consider a seasonal daily naive model (<code>SNaive</code>) and a seasonal average model (<code>Saverage</code>). These models are simple and can be used to compare the performance of more complex models.</p>
-<p>More complex models to be built and analysed would include: 1. Linear Model (<code>LM</code>) - using a linear model to predict NetUse including a linear trend, seasonality (time of day, work day indicator, month), and exogeneous variates such as temperature. 2. Error-Trend-Seasonality (‘ETS’) - implement Holt and Winter’s model that incorporates seasonality. 3. Seasonal Auto Regressive Model with exogeneous variates (<code>SARx</code>) - a more complex model that includes seasonality, autoregression and exogeneous variates.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>fit_stl <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">stl =</span> <span class="fu">STL</span>(NetUse <span class="sc">~</span> </span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">season</span>(<span class="at">period =</span> <span class="st">"day"</span>) <span class="sc">+</span> </span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">season</span>(<span class="at">period =</span> <span class="st">"week"</span>) <span class="sc">+</span> </span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">8761</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>) </span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        ) </span>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#test &lt;- cohaus_wide |&gt; sample_frac(0.2)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#train &lt;- anti_join(cohaus_wide, test, by = "dttm")</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span> </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_head</span>(<span class="at">prop =</span> <span class="fl">0.8</span>)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit_stl <span class="sc">|&gt;</span> </span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()<span class="sc">|&gt;</span> </span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01012022</span>),</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>         dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01032024</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> cohaus_wide <span class="sc">|&gt;</span> </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_tail</span>(<span class="at">n =</span> <span class="fu">nrow</span>(cohaus_wide) <span class="sc">-</span> <span class="fu">nrow</span>(train))</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>train_ts <span class="ot">&lt;-</span> train <span class="sc">|&gt;</span> <span class="fu">as_tsibble</span>(<span class="at">index =</span> dttm)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>test_ts <span class="ot">&lt;-</span> test <span class="sc">|&gt;</span> <span class="fu">as_tsibble</span>(<span class="at">index =</span> dttm)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> train <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">-</span>dttm)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> test <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">-</span>dttm)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(train); <span class="fu">dim</span>(test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 15168     7</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3792    7</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Function to determine Mean Squared Error as Percentage of Variance</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>mse_pct <span class="ot">&lt;-</span> <span class="cf">function</span>(actual, predicted) {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>((actual <span class="sc">-</span> predicted)<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">var</span>(actual)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="seasonal-average" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="seasonal-average"><span class="header-section-number">4.1</span> Seasonal Average</h2>
+<p>Probably the simplest model to implement is a seasonal average model. This model calculates the arithmetic mean of NetUse by quarter and hour and applies this as our prediction of net energy consumption for our test data set.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>avg <span class="ot">&lt;-</span> train <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(quarter,hour) <span class="sc">|&gt;</span> </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">avg =</span> <span class="fu">mean</span>(NetUse), <span class="at">.groups =</span> <span class="st">"rowwise"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>avg <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">avg =</span> <span class="fu">round</span>(avg,<span class="dv">2</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> quarter, <span class="at">values_from =</span> avg) <span class="sc">|&gt;</span> </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 5
+   hour    Q01   Q02   Q03   Q04
+   &lt;fct&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+ 1 H00    4.91  4.85  5.62  5.4 
+ 2 H01    4.15  4.15  4.86  4.16
+ 3 H02    3.44  4.09  4.9   3.52
+ 4 H03    3.26  4.07  4.78  3.28
+ 5 H04    8.01 11.5  12.6  11.2 
+ 6 H05    3.04  3.61  4.2   3.2 
+ 7 H06    3.09  4.12  4.85  2.87
+ 8 H07    3.76  5.59  6.32  2.01
+ 9 H08    0.9   3.39  3.85 -1.69
+10 H09   -4.28 -0.69 -0.13 -6.55
+# ℹ 14 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>yhat_avg <span class="ot">&lt;-</span> test <span class="sc">|&gt;</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(avg, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"hour"</span>, <span class="st">"quarter"</span>)) <span class="sc">|&gt;</span> <span class="fu">pull</span>(avg)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_avg)) <span class="sc">+</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Seasonal Average Model"</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="models_files/figure-html/stl-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="models_files/figure-html/avg-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_lm <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">lm =</span> <span class="fu">TSLM</span>(NetUse <span class="sc">~</span> hour <span class="sc">+</span> sunUp <span class="sc">+</span> workDay <span class="sc">+</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                    quarter <span class="sc">+</span> Tdry))</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit_lm <span class="sc">|&gt;</span> <span class="fu">report</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_avg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Series: NetUse 
-Model: TSLM 
+<pre><code>[1] 29.66068</code></pre>
+</div>
+</div>
+</section>
+<section id="ols-linear-regression" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="ols-linear-regression"><span class="header-section-number">4.2</span> OLS Linear Regression</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ols <span class="ot">&lt;-</span> <span class="fu">lm</span>(NetUse <span class="sc">~</span> ., <span class="at">data =</span> train)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ols)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = NetUse ~ ., data = train)
 
 Residuals:
-      Min        1Q    Median        3Q       Max 
--23.10138  -2.96692   0.09185   2.91301  24.49282 
+     Min       1Q   Median       3Q      Max 
+-23.6291  -2.9336   0.0607   3.0091  22.5722 
 
 Coefficients:
              Estimate Std. Error t value Pr(&gt;|t|)    
-(Intercept)   9.94530    0.32311  30.780  &lt; 2e-16 ***
-hourH01      -0.94969    0.26914  -3.529 0.000419 ***
-hourH02      -1.40010    0.26919  -5.201 2.00e-07 ***
-hourH03      -1.57421    0.26926  -5.846 5.11e-09 ***
-hourH04       5.20897    0.26934  19.340  &lt; 2e-16 ***
-hourH05      -2.03521    0.26938  -7.555 4.38e-14 ***
-hourH06      -1.67932    0.26980  -6.224 4.94e-10 ***
-hourH07      -0.12861    0.29383  -0.438 0.661603    
-hourH08      -2.02212    0.33423  -6.050 1.48e-09 ***
-hourH09      -5.68315    0.33441 -16.995  &lt; 2e-16 ***
-hourH10      -8.10874    0.33522 -24.189  &lt; 2e-16 ***
-hourH11     -10.20867    0.33621 -30.364  &lt; 2e-16 ***
-hourH12     -11.83191    0.33691 -35.118  &lt; 2e-16 ***
-hourH13     -12.74321    0.33729 -37.782  &lt; 2e-16 ***
-hourH14     -12.16183    0.33742 -36.044  &lt; 2e-16 ***
-hourH15      -9.06350    0.33715 -26.882  &lt; 2e-16 ***
-hourH16      -1.46496    0.33649  -4.354 1.35e-05 ***
-hourH17       2.77803    0.33559   8.278  &lt; 2e-16 ***
-hourH18       6.73448    0.29932  22.499  &lt; 2e-16 ***
-hourH19       6.13612    0.29130  21.065  &lt; 2e-16 ***
-hourH20       6.23636    0.27925  22.333  &lt; 2e-16 ***
-hourH21       5.59332    0.26940  20.762  &lt; 2e-16 ***
-hourH22       4.22788    0.26922  15.704  &lt; 2e-16 ***
-hourH23       1.94770    0.26914   7.237 4.77e-13 ***
-sunUpTRUE    -1.09955    0.19899  -5.526 3.33e-08 ***
-workDayTRUE  -0.25940    0.08317  -3.119 0.001818 ** 
-quarterQ02    3.63082    0.12750  28.476  &lt; 2e-16 ***
-quarterQ03    3.48923    0.14905  23.410  &lt; 2e-16 ***
-quarterQ04   -0.05826    0.11506  -0.506 0.612659    
-Tdry         -0.42896    0.01333 -32.177  &lt; 2e-16 ***
+(Intercept) -9.039528   0.480938 -18.796  &lt; 2e-16 ***
+sunUpTRUE   -0.941970   0.204322  -4.610 4.06e-06 ***
+workDayTRUE -0.189508   0.084461  -2.244 0.024864 *  
+Tdry        -0.295028   0.013523 -21.817  &lt; 2e-16 ***
+RH           0.192906   0.003655  52.775  &lt; 2e-16 ***
+hourH01     -1.010703   0.273283  -3.698 0.000218 ***
+hourH02     -1.504223   0.273350  -5.503 3.80e-08 ***
+hourH03     -1.757583   0.273433  -6.428 1.33e-10 ***
+hourH04      4.991341   0.273504  18.250  &lt; 2e-16 ***
+hourH05     -2.283014   0.273567  -8.345  &lt; 2e-16 ***
+hourH06     -1.978511   0.273782  -7.227 5.19e-13 ***
+hourH07     -0.270190   0.292706  -0.923 0.355981    
+hourH08     -1.508674   0.340744  -4.428 9.60e-06 ***
+hourH09     -4.543530   0.341089 -13.321  &lt; 2e-16 ***
+hourH10     -5.920559   0.343142 -17.254  &lt; 2e-16 ***
+hourH11     -6.768134   0.345728 -19.576  &lt; 2e-16 ***
+hourH12     -7.621006   0.347355 -21.940  &lt; 2e-16 ***
+hourH13     -8.361509   0.348598 -23.986  &lt; 2e-16 ***
+hourH14     -7.713602   0.348927 -22.107  &lt; 2e-16 ***
+hourH15     -4.422326   0.348345 -12.695  &lt; 2e-16 ***
+hourH16      3.525592   0.346995  10.160  &lt; 2e-16 ***
+hourH17      6.845233   0.344840  19.850  &lt; 2e-16 ***
+hourH18      9.737877   0.299412  32.523  &lt; 2e-16 ***
+hourH19      7.867882   0.289387  27.188  &lt; 2e-16 ***
+hourH20      7.369737   0.279925  26.328  &lt; 2e-16 ***
+hourH21      6.492781   0.273716  23.721  &lt; 2e-16 ***
+hourH22      4.852809   0.273420  17.749  &lt; 2e-16 ***
+hourH23      2.148023   0.273287   7.860 4.10e-15 ***
+quarterQ02   2.702112   0.124164  21.762  &lt; 2e-16 ***
+quarterQ03   2.939880   0.146201  20.109  &lt; 2e-16 ***
+quarterQ04  -0.429109   0.132951  -3.228 0.001251 ** 
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 5.349 on 18930 degrees of freedom
-Multiple R-squared: 0.6752, Adjusted R-squared: 0.6747
-F-statistic:  1357 on 29 and 18930 DF, p-value: &lt; 2.22e-16</code></pre>
+Residual standard error: 4.858 on 15137 degrees of freedom
+Multiple R-squared:  0.7204,    Adjusted R-squared:  0.7199 
+F-statistic:  1300 on 30 and 15137 DF,  p-value: &lt; 2.2e-16</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_lm <span class="sc">|&gt;</span> <span class="fu">gg_tsresiduals</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>yhat_ols <span class="ot">&lt;-</span> <span class="fu">predict</span>(ols, <span class="at">newdata =</span> test)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_ols)) <span class="sc">+</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"OLS Regression Model"</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="models_files/figure-html/lm-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="models_files/figure-html/ols-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">etsANA =</span> <span class="fu">ETS</span>(NetUse <span class="sc">~</span> <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span> </span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                       <span class="fu">trend</span>(<span class="st">"N"</span>) <span class="sc">+</span> </span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                       <span class="fu">season</span>(<span class="st">"A"</span>, <span class="at">period =</span> <span class="dv">24</span>))</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                  </span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(dttm <span class="sc">&gt;=</span> <span class="fu">dmy</span>(<span class="dv">01012023</span>),</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>           dttm <span class="sc">&lt;</span> <span class="fu">dmy</span>(<span class="dv">01042023</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="models_files/figure-html/ETS-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"3 days"</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="models_files/figure-html/ETS-2.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">augment</span>() <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">-</span>.model) <span class="sc">|&gt;</span> <span class="fu">tail</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_ols)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tsibble: 6 x 5 [1h] &lt;UTC&gt;
-  dttm                NetUse .fitted .resid .innov
-  &lt;dttm&gt;               &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-1 2024-02-29 18:00:00   4.10    9.00 -4.90  -4.90 
-2 2024-02-29 19:00:00   3.71    9.71 -6.00  -6.00 
-3 2024-02-29 20:00:00   7.70    8.37 -0.665 -0.665
-4 2024-02-29 21:00:00   6.46    9.04 -2.57  -2.57 
-5 2024-02-29 22:00:00   5.79    6.79 -0.996 -0.996
-6 2024-02-29 23:00:00   3.70    5.19 -1.49  -1.49 </code></pre>
+<pre><code>[1] 29.63648</code></pre>
 </div>
 </div>
+</section>
+<section id="lasso-regression" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="lasso-regression"><span class="header-section-number">4.3</span> Lasso Regression</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_arx <span class="ot">&lt;-</span> cohaus_ts <span class="sc">|&gt;</span> </span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">lm =</span> <span class="fu">TSLM</span>(NetUse <span class="sc">~</span> <span class="fu">lag</span>(NetUse) <span class="sc">+</span> hour <span class="sc">+</span> sunUp <span class="sc">+</span> workDay <span class="sc">+</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                    quarter <span class="sc">+</span> Tdry))</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>fit_arx <span class="sc">|&gt;</span> <span class="fu">report</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>train_modelframe <span class="ot">&lt;-</span> <span class="fu">model.frame</span>(NetUse <span class="sc">~</span> ., <span class="at">data =</span> train)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>train_X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(NetUse <span class="sc">~</span> ., <span class="at">data =</span> train_modelframe)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(train_X)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 15168    31</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>test_modelframe <span class="ot">&lt;-</span> <span class="fu">model.frame</span>(NetUse <span class="sc">~</span> ., <span class="at">data =</span> test)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>test_X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(NetUse <span class="sc">~</span> ., <span class="at">data =</span> test_modelframe)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(test_X)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3792   31</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressMessages</span>(<span class="fu">library</span>(glmnet))</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>lasso_cv <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(train_X, train<span class="sc">$</span>NetUse)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_cv)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/lasso-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>lasso <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(train_X, train<span class="sc">$</span>NetUse, <span class="at">lambda =</span> lasso_cv<span class="sc">$</span>lambda<span class="fl">.1</span>se)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">predict</span>(lasso, <span class="at">type =</span> <span class="st">"coef"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>32 x 1 sparse Matrix of class "dgCMatrix"
+                     s0
+(Intercept) -9.29638731
+(Intercept)  .         
+sunUpTRUE   -1.58412934
+workDayTRUE -0.01171215
+Tdry        -0.31078557
+RH           0.19168061
+hourH01      .         
+hourH02     -0.38190104
+hourH03     -0.63762778
+hourH04      5.30016906
+hourH05     -1.16542948
+hourH06     -0.83065268
+hourH07      0.37166076
+hourH08      .         
+hourH09     -2.74628902
+hourH10     -4.11215284
+hourH11     -4.95153824
+hourH12     -5.79951897
+hourH13     -6.53764733
+hourH14     -5.88912654
+hourH15     -2.59906951
+hourH16      4.53504514
+hourH17      7.84797530
+hourH18     10.45001021
+hourH19      8.49888142
+hourH20      7.89043227
+hourH21      6.82793601
+hourH22      5.18485606
+hourH23      2.47709036
+quarterQ02   2.26582819
+quarterQ03   2.45885640
+quarterQ04  -0.41333328</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>yhat_lasso <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso, <span class="at">newx =</span> test_X)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_lasso)) <span class="sc">+</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Lasso Regression Model"</span>,</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/lasso-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_lasso)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 29.99566</code></pre>
+</div>
+</div>
+</section>
+<section id="lasso-regression-with-interactions" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="lasso-regression-with-interactions"><span class="header-section-number">4.4</span> Lasso Regression with Interactions</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>intformula <span class="ot">&lt;-</span> NetUse <span class="sc">~</span> (hour <span class="sc">+</span> quarter) <span class="sc">*</span> </span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>                        (sunUp <span class="sc">+</span> workDay <span class="sc">+</span> Tdry <span class="sc">+</span> RH)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>train_modelframe <span class="ot">&lt;-</span> <span class="fu">model.frame</span>(intformula, <span class="at">data =</span> train)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>train_X_int <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(intformula, train_modelframe)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(train_X_int)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 15168   135</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>test_modelframe <span class="ot">&lt;-</span> <span class="fu">model.frame</span>(intformula, <span class="at">data =</span> test)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>test_X_int <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(intformula, test_modelframe)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(test_X_int)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3792  135</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>cv_lasso_int <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(train_X_int, train<span class="sc">$</span>NetUse)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(cv_lasso_int)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/lasso_int-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>lasso_int <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(train_X_int, train<span class="sc">$</span>NetUse, <span class="at">lambda =</span> cv_lasso_int<span class="sc">$</span>lambda<span class="fl">.1</span>se)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>yhat_lasso_int <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_int, <span class="at">newx =</span> test_X_int)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_lasso_int)) <span class="sc">+</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Lasso with Interactions Model"</span>,</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/lasso_int-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_lasso_int)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 19.96419</code></pre>
+</div>
+</div>
+</section>
+<section id="ridge-regression" class="level2" data-number="4.5">
+<h2 data-number="4.5" class="anchored" data-anchor-id="ridge-regression"><span class="header-section-number">4.5</span> Ridge Regression</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(train_X, train<span class="sc">$</span>NetUse, <span class="at">alpha =</span> <span class="dv">0</span>) <span class="co"># alpha = 0 for ridge</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/ridge-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>xval <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(train_X, train<span class="sc">$</span>NetUse, <span class="at">alpha =</span> <span class="dv">0</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(xval)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/ridge-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit, <span class="at">s =</span> xval<span class="sc">$</span>lambda<span class="fl">.1</span>se)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>32 x 1 sparse Matrix of class "dgCMatrix"
+                     s1
+(Intercept) -6.44565528
+(Intercept)  .         
+sunUpTRUE   -1.93742490
+workDayTRUE -0.17231436
+Tdry        -0.31632086
+RH           0.17351202
+hourH01     -1.10712330
+hourH02     -1.54743767
+hourH03     -1.77510537
+hourH04      4.35438917
+hourH05     -2.24861508
+hourH06     -1.92654481
+hourH07      0.03061436
+hourH08     -0.68790006
+hourH09     -3.50782902
+hourH10     -4.83844681
+hourH11     -5.66901896
+hourH12     -6.47234462
+hourH13     -7.16806815
+hourH14     -6.58672682
+hourH15     -3.59045816
+hourH16      3.64450843
+hourH17      6.69678840
+hourH18      8.97743167
+hourH19      7.23555653
+hourH20      6.67747658
+hourH21      5.65350955
+hourH22      4.18494160
+hourH23      1.74485795
+quarterQ02   2.14669399
+quarterQ03   2.32673827
+quarterQ04  -0.67483024</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>yhat_ridge <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">newx =</span> test_X, <span class="at">s =</span> xval<span class="sc">$</span>lambda<span class="fl">.1</span>se)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_lasso)) <span class="sc">+</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Ridge Regression Model"</span>,</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/ridge-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_ridge)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 30.42147</code></pre>
+</div>
+</div>
+</section>
+<section id="regression-tree" class="level2" data-number="4.6">
+<h2 data-number="4.6" class="anchored" data-anchor-id="regression-tree"><span class="header-section-number">4.6</span> Regression Tree</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>tree <span class="ot">&lt;-</span> <span class="fu">rpart</span>(NetUse <span class="sc">~</span> ., </span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>              <span class="at">data =</span> train,</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">control =</span> <span class="fu">rpart.control</span>(<span class="at">cp =</span> <span class="fl">0.0001</span>))</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>cptable <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(tree<span class="sc">$</span>cptable)</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>x1se <span class="ot">&lt;-</span> cptable <span class="sc">|&gt;</span> </span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">x1se =</span> xerror <span class="sc">+</span> xstd) <span class="sc">|&gt;</span></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(xerror <span class="sc">==</span> <span class="fu">min</span>(xerror)) <span class="sc">|&gt;</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(x1se)</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>cp_1se <span class="ot">&lt;-</span> cptable <span class="sc">|&gt;</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(xerror <span class="sc">&lt;</span> x1se) <span class="sc">|&gt;</span></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(xerror <span class="sc">==</span> <span class="fu">max</span>(xerror))</span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>cp_1se</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 5
+        CP nsplit `rel error` xerror    xstd
+     &lt;dbl&gt;  &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+1 0.000276     93       0.168  0.188 0.00306</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>cptable <span class="sc">|&gt;</span> </span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> nsplit, <span class="at">y =</span> xerror)) <span class="sc">+</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> cp_1se<span class="sc">$</span>nsplit, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Cost Complexity Pruning"</span>,</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Number of Splits"</span>,</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Cross-Validation Error"</span>) <span class="sc">+</span></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/regression_tree-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>prune_tree <span class="ot">&lt;-</span> <span class="fu">prune</span>(tree, <span class="at">cp =</span> cp_1se<span class="sc">$</span>CP)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(prune_tree<span class="sc">$</span>cptable)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          CP nsplit rel error    xerror        xstd
+1 0.44019051      0 1.0000000 1.0001951 0.014488806
+2 0.09184008      1 0.5598095 0.5600058 0.008079358
+3 0.07250195      2 0.4679694 0.4696495 0.007022138
+4 0.03266437      3 0.3954675 0.3971612 0.006400727
+5 0.02604336      4 0.3628031 0.3634131 0.006056158
+6 0.02301931      5 0.3367597 0.3398637 0.005235032</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>yhat_pruned <span class="ot">&lt;-</span> <span class="fu">predict</span>(prune_tree, test, <span class="at">type =</span> <span class="st">"vector"</span>)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_pruned)) <span class="sc">+</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Pruned Regression Tree Model"</span>,</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/regression_tree-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_pruned)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 22.92341</code></pre>
+</div>
+</div>
+</section>
+<section id="random-forest" class="level2" data-number="4.7">
+<h2 data-number="4.7" class="anchored" data-anchor-id="random-forest"><span class="header-section-number">4.7</span> Random Forest</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressMessages</span>(<span class="fu">library</span>(ranger))</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">try</span>(forest <span class="ot">&lt;-</span> <span class="fu">ranger</span>(NetUse <span class="sc">~</span> ., </span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> train,</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>                     <span class="at">num.trees =</span> <span class="dv">1000</span>,</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>                     <span class="at">mtry =</span> <span class="dv">2</span>,</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">importance =</span> <span class="st">"impurity"</span>)</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>forest</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Ranger result
+
+Call:
+ ranger(NetUse ~ ., data = train, num.trees = 1000, mtry = 2,      importance = "impurity") 
+
+Type:                             Regression 
+Number of trees:                  1000 
+Sample size:                      15168 
+Number of independent variables:  6 
+Mtry:                             2 
+Target node size:                 5 
+Variable importance mode:         impurity 
+Splitrule:                        variance 
+OOB prediction error (MSE):       13.94609 
+R squared (OOB):                  0.834429 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sort</span>(forest<span class="sc">$</span>variable.importance, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)<span class="sc">/</span><span class="fu">sum</span>(forest<span class="sc">$</span>variable.importance)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       hour          RH        Tdry       sunUp     quarter     workDay 
+0.332078412 0.273992209 0.195335024 0.137876770 0.053925341 0.006792244 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>yhat_forest <span class="ot">&lt;-</span> <span class="fu">predict</span>(forest, test, <span class="at">type =</span> <span class="st">"response"</span>)<span class="sc">$</span>predictions</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_forest)) <span class="sc">+</span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Random Forest Model"</span>,</span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/random_forest-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_forest)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 21.54652</code></pre>
+</div>
+</div>
+</section>
+<section id="xgboost" class="level2" data-number="4.8">
+<h2 data-number="4.8" class="anchored" data-anchor-id="xgboost"><span class="header-section-number">4.8</span> XGBoost</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressMessages</span>(<span class="fu">library</span>(xgboost))</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>xgb_cv <span class="ot">&lt;-</span> <span class="fu">xgb.cv</span>(<span class="at">data =</span> train_X, </span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">label =</span> train<span class="sc">$</span>NetUse, </span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">nrounds =</span> <span class="dv">500</span>, </span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">nfold =</span> <span class="dv">10</span>,</span>
+<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">eta =</span> <span class="fl">0.1</span>,</span>
+<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">early_stopping_rounds =</span> <span class="dv">10</span>,</span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">objective =</span> <span class="st">"reg:squarederror"</span>, </span>
+<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">print_every_n =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] train-rmse:8.775789+0.016969    test-rmse:8.784456+0.157858 
+Multiple eval metrics are present. Will use test_rmse for early stopping.
+Will train until test_rmse hasn't improved in 10 rounds.
+
+[11]    train-rmse:5.363457+0.009351    test-rmse:5.448735+0.111744 
+[21]    train-rmse:4.311584+0.014339    test-rmse:4.467683+0.092786 
+[31]    train-rmse:3.897520+0.011619    test-rmse:4.108626+0.085632 
+[41]    train-rmse:3.701552+0.009329    test-rmse:3.956388+0.083490 
+[51]    train-rmse:3.588474+0.007918    test-rmse:3.880037+0.082436 
+[61]    train-rmse:3.516325+0.009961    test-rmse:3.838205+0.084518 
+[71]    train-rmse:3.461216+0.009838    test-rmse:3.812638+0.085630 
+[81]    train-rmse:3.418219+0.009353    test-rmse:3.794910+0.085900 
+[91]    train-rmse:3.377933+0.008209    test-rmse:3.782893+0.085973 
+[101]   train-rmse:3.344584+0.010214    test-rmse:3.776263+0.085549 
+[111]   train-rmse:3.316151+0.010613    test-rmse:3.771457+0.084734 
+[121]   train-rmse:3.288372+0.011347    test-rmse:3.769233+0.084370 
+[131]   train-rmse:3.264286+0.013652    test-rmse:3.766216+0.082609 
+[141]   train-rmse:3.239969+0.013207    test-rmse:3.766986+0.082357 
+Stopping. Best iteration:
+[133]   train-rmse:3.259121+0.012159    test-rmse:3.765773+0.081979</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>xgb <span class="ot">&lt;-</span> <span class="fu">xgboost</span>(<span class="at">data =</span> train_X, </span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">label =</span> train<span class="sc">$</span>NetUse, </span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">nrounds =</span> xgb_cv<span class="sc">$</span>best_iteration, </span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">eta =</span> <span class="fl">0.1</span>,</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">objective =</span> <span class="st">"reg:squarederror"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] train-rmse:8.775400 
+[2] train-rmse:8.204966 
+[3] train-rmse:7.709369 
+[4] train-rmse:7.271102 
+[5] train-rmse:6.885861 
+[6] train-rmse:6.549261 
+[7] train-rmse:6.249195 
+[8] train-rmse:5.988592 
+[9] train-rmse:5.758526 
+[10]    train-rmse:5.552459 
+[11]    train-rmse:5.372372 
+[12]    train-rmse:5.201411 
+[13]    train-rmse:5.060700 
+[14]    train-rmse:4.933847 
+[15]    train-rmse:4.808002 
+[16]    train-rmse:4.701364 
+[17]    train-rmse:4.606950 
+[18]    train-rmse:4.528325 
+[19]    train-rmse:4.449227 
+[20]    train-rmse:4.380080 
+[21]    train-rmse:4.319832 
+[22]    train-rmse:4.262991 
+[23]    train-rmse:4.212051 
+[24]    train-rmse:4.167361 
+[25]    train-rmse:4.120336 
+[26]    train-rmse:4.084269 
+[27]    train-rmse:4.043892 
+[28]    train-rmse:4.004957 
+[29]    train-rmse:3.973087 
+[30]    train-rmse:3.942646 
+[31]    train-rmse:3.911859 
+[32]    train-rmse:3.884302 
+[33]    train-rmse:3.863133 
+[34]    train-rmse:3.840648 
+[35]    train-rmse:3.817935 
+[36]    train-rmse:3.801703 
+[37]    train-rmse:3.782223 
+[38]    train-rmse:3.765004 
+[39]    train-rmse:3.751500 
+[40]    train-rmse:3.731680 
+[41]    train-rmse:3.719267 
+[42]    train-rmse:3.704517 
+[43]    train-rmse:3.694217 
+[44]    train-rmse:3.682860 
+[45]    train-rmse:3.673770 
+[46]    train-rmse:3.663762 
+[47]    train-rmse:3.651289 
+[48]    train-rmse:3.640905 
+[49]    train-rmse:3.630342 
+[50]    train-rmse:3.616683 
+[51]    train-rmse:3.609865 
+[52]    train-rmse:3.597686 
+[53]    train-rmse:3.588752 
+[54]    train-rmse:3.581665 
+[55]    train-rmse:3.576429 
+[56]    train-rmse:3.566871 
+[57]    train-rmse:3.560794 
+[58]    train-rmse:3.549945 
+[59]    train-rmse:3.544720 
+[60]    train-rmse:3.540901 
+[61]    train-rmse:3.535674 
+[62]    train-rmse:3.531040 
+[63]    train-rmse:3.526125 
+[64]    train-rmse:3.520631 
+[65]    train-rmse:3.516992 
+[66]    train-rmse:3.510700 
+[67]    train-rmse:3.506793 
+[68]    train-rmse:3.502439 
+[69]    train-rmse:3.498917 
+[70]    train-rmse:3.494283 
+[71]    train-rmse:3.491409 
+[72]    train-rmse:3.488028 
+[73]    train-rmse:3.484930 
+[74]    train-rmse:3.478686 
+[75]    train-rmse:3.475977 
+[76]    train-rmse:3.469241 
+[77]    train-rmse:3.461175 
+[78]    train-rmse:3.457969 
+[79]    train-rmse:3.455126 
+[80]    train-rmse:3.447125 
+[81]    train-rmse:3.442929 
+[82]    train-rmse:3.440330 
+[83]    train-rmse:3.437361 
+[84]    train-rmse:3.434050 
+[85]    train-rmse:3.430927 
+[86]    train-rmse:3.427534 
+[87]    train-rmse:3.424471 
+[88]    train-rmse:3.422859 
+[89]    train-rmse:3.420217 
+[90]    train-rmse:3.417769 
+[91]    train-rmse:3.415678 
+[92]    train-rmse:3.409756 
+[93]    train-rmse:3.406246 
+[94]    train-rmse:3.399136 
+[95]    train-rmse:3.396897 
+[96]    train-rmse:3.393975 
+[97]    train-rmse:3.389157 
+[98]    train-rmse:3.387284 
+[99]    train-rmse:3.381758 
+[100]   train-rmse:3.375372 
+[101]   train-rmse:3.372026 
+[102]   train-rmse:3.366840 
+[103]   train-rmse:3.365283 
+[104]   train-rmse:3.362872 
+[105]   train-rmse:3.360096 
+[106]   train-rmse:3.355877 
+[107]   train-rmse:3.353786 
+[108]   train-rmse:3.347318 
+[109]   train-rmse:3.346060 
+[110]   train-rmse:3.343336 
+[111]   train-rmse:3.341263 
+[112]   train-rmse:3.339787 
+[113]   train-rmse:3.338327 
+[114]   train-rmse:3.336034 
+[115]   train-rmse:3.333980 
+[116]   train-rmse:3.332184 
+[117]   train-rmse:3.331276 
+[118]   train-rmse:3.329048 
+[119]   train-rmse:3.325870 
+[120]   train-rmse:3.323005 
+[121]   train-rmse:3.317808 
+[122]   train-rmse:3.314301 
+[123]   train-rmse:3.311968 
+[124]   train-rmse:3.310868 
+[125]   train-rmse:3.309113 
+[126]   train-rmse:3.307641 
+[127]   train-rmse:3.301374 
+[128]   train-rmse:3.298753 
+[129]   train-rmse:3.297943 
+[130]   train-rmse:3.292887 
+[131]   train-rmse:3.291732 
+[132]   train-rmse:3.289695 
+[133]   train-rmse:3.287047 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>yhat_xgb <span class="ot">&lt;-</span> <span class="fu">predict</span>(xgb, <span class="at">newdata =</span> test_X)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_pruned)) <span class="sc">+</span></span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"XGBoost Model"</span>,</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/xgboost-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_xgb)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 20.89682</code></pre>
+</div>
+</div>
+</section>
+<section id="seasonal-ets" class="level2" data-number="4.9">
+<h2 data-number="4.9" class="anchored" data-anchor-id="seasonal-ets"><span class="header-section-number">4.9</span> Seasonal ETS</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="ot">&lt;-</span> train_ts <span class="sc">|&gt;</span> </span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">ETS</span>(NetUse <span class="sc">~</span> <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span> <span class="fu">trend</span>(<span class="st">"N"</span>) <span class="sc">+</span> <span class="fu">season</span>(<span class="st">"A"</span>)))</span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>fit_ets <span class="sc">|&gt;</span> <span class="fu">report</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Series: NetUse 
-Model: TSLM 
+Model: ETS(A,N,A) 
+  Smoothing parameters:
+    alpha = 0.586248 
+    gamma = 0.1142449 
 
-Residuals:
-      Min        1Q    Median        3Q       Max 
--18.32296  -1.89075   0.00383   1.77611  26.30535 
+  Initial states:
+      l[0]     s[0]    s[-1]   s[-2]    s[-3]    s[-4]   s[-5]    s[-6]
+ -7.782323 5.198271 6.031678 5.92693 9.079136 6.682808 7.24666 1.695157
+      s[-7]     s[-8]     s[-9]    s[-10]    s[-11]    s[-12]    s[-13]
+ -0.7263089 -7.259734 -10.02647 -10.67955 -11.26348 -9.826209 -7.847681
+    s[-14]     s[-15]   s[-16]   s[-17]   s[-18]   s[-19]    s[-20]   s[-21]
+ -3.811655 -0.4996266 1.516251 2.047417 1.334611 9.058746 0.9822853 2.134487
+   s[-22]    s[-23]
+ 2.591731 0.4145526
 
-Coefficients:
-             Estimate Std. Error t value Pr(&gt;|t|)    
-(Intercept)  1.299463   0.224481   5.789 7.20e-09 ***
-lag(NetUse)  0.744671   0.004908 151.720  &lt; 2e-16 ***
-hourH01      0.498249   0.181107   2.751  0.00594 ** 
-hourH02      0.742124   0.181440   4.090 4.33e-05 ***
-hourH03      0.894850   0.181671   4.926 8.48e-07 ***
-hourH04      7.790308   0.181788  42.854  &lt; 2e-16 ***
-hourH05     -4.526866   0.181768 -24.905  &lt; 2e-16 ***
-hourH06      1.008234   0.182165   5.535 3.16e-08 ***
-hourH07      0.991702   0.197572   5.019 5.23e-07 ***
-hourH08     -2.736324   0.224621 -12.182  &lt; 2e-16 ***
-hourH09     -4.696833   0.224780 -20.895  &lt; 2e-16 ***
-hourH10     -4.291837   0.226635 -18.937  &lt; 2e-16 ***
-hourH11     -4.487986   0.229024 -19.596  &lt; 2e-16 ***
-hourH12     -4.432555   0.231562 -19.142  &lt; 2e-16 ***
-hourH13     -4.059147   0.233734 -17.367  &lt; 2e-16 ***
-hourH14     -2.753721   0.235034 -11.716  &lt; 2e-16 ***
-hourH15     -0.019583   0.234239  -0.084  0.93337    
-hourH16      5.348112   0.230498  23.202  &lt; 2e-16 ***
-hourH17      4.005190   0.225623  17.752  &lt; 2e-16 ***
-hourH18      5.660898   0.201246  28.129  &lt; 2e-16 ***
-hourH19      2.044089   0.197589  10.345  &lt; 2e-16 ***
-hourH20      2.854723   0.188965  15.107  &lt; 2e-16 ***
-hourH21      2.765324   0.181990  15.195  &lt; 2e-16 ***
-hourH22      1.553279   0.181771   8.545  &lt; 2e-16 ***
-hourH23      0.271341   0.181195   1.498  0.13428    
-sunUpTRUE    1.201110   0.134535   8.928  &lt; 2e-16 ***
-workDayTRUE -0.066125   0.055890  -1.183  0.23677    
-quarterQ02   1.054536   0.087325  12.076  &lt; 2e-16 ***
-quarterQ03   0.969666   0.101500   9.553  &lt; 2e-16 ***
-quarterQ04  -0.081248   0.077300  -1.051  0.29323    
-Tdry        -0.120490   0.009183 -13.120  &lt; 2e-16 ***
----
-Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+  sigma^2:  13.2084
 
-Residual standard error: 3.593 on 18928 degrees of freedom
-Multiple R-squared: 0.8534, Adjusted R-squared: 0.8532
-F-statistic:  3674 on 30 and 18928 DF, p-value: &lt; 2.22e-16</code></pre>
+     AIC     AICc      BIC 
+185195.8 185195.9 185401.8 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_arx <span class="sc">|&gt;</span> <span class="fu">gg_tsresiduals</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
-(`geom_line()`).</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
-(`geom_point()`).</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
-(`stat_bin()`).</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>yhat_ets <span class="ot">&lt;-</span> fit_ets <span class="sc">|&gt;</span> <span class="fu">forecast</span>(<span class="at">h =</span> <span class="fu">nrow</span>(test_ts)) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> <span class="fu">pull</span>(.mean)</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>test_ts <span class="sc">|&gt;</span> </span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_ets)) <span class="sc">+</span></span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Seasonal ETS Model"</span>,</span>
+<span id="cb64-9"><a href="#cb64-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb64-10"><a href="#cb64-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="models_files/figure-html/arx-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="models_files/figure-html/ets-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test_ts<span class="sc">$</span>NetUse, yhat_ets)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 49.86689</code></pre>
+</div>
+</div>
+</section>
+<section id="arimax" class="level2" data-number="4.10">
+<h2 data-number="4.10" class="anchored" data-anchor-id="arimax"><span class="header-section-number">4.10</span> ARIMAx</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># fit arimax model with exogenous variables, let fabletools find best pdqs</span></span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a><span class="co"># fit_arimax &lt;- train_ts |&gt; </span></span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   model(ARIMA(NetUse ~ xreg(sunUp + workDay + Tdry + RH)))</span></span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a><span class="co"># fit_arimax |&gt; report()</span></span>
+<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>fit_arimax <span class="ot">&lt;-</span> train_ts <span class="sc">|&gt;</span> </span>
+<span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">ARIMA</span>(NetUse <span class="sc">~</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">xreg</span>(sunUp <span class="sc">+</span> workDay <span class="sc">+</span> Tdry <span class="sc">+</span> RH)))</span>
+<span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>fit_arimax <span class="sc">|&gt;</span> <span class="fu">report</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: NetUse 
+Model: LM w/ ARIMA(1,0,3)(2,1,0)[24] errors 
+
+Coefficients:
+         ar1      ma1      ma2    ma3     sar1     sar2  sunUpTRUE  workDayTRUE
+      0.7441  -0.2083  -0.0446  0.036  -0.6053  -0.2948     1.1186      -0.2260
+s.e.  0.0144   0.0163   0.0111  0.010   0.0078   0.0078     0.5448       0.1302
+         Tdry      RH
+      -0.2034  0.1144
+s.e.   0.0302  0.0059
+
+sigma^2 estimated as 13.08:  log likelihood=-40957.97
+AIC=81937.94   AICc=81937.96   BIC=82021.82</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>newdata <span class="ot">&lt;-</span> test_ts <span class="sc">|&gt;</span> </span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(dttm, hour, quarter, Tdry, RH, sunUp, workDay) <span class="sc">|&gt;</span> </span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dttm)</span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>yhat_arimax <span class="ot">&lt;-</span> fit_arimax <span class="sc">|&gt;</span> <span class="fu">forecast</span>(newdata) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> <span class="fu">pull</span>(.mean)</span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>test <span class="sc">|&gt;</span> </span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> NetUse, <span class="at">x =</span> yhat_arimax)) <span class="sc">+</span></span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"ARIMAx Model"</span>,</span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted"</span>,</span>
+<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Actual"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="models_files/figure-html/arimax-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_arimax)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 56.01575</code></pre>
+</div>
+</div>
+</section>
+<section id="summary-of-results" class="level2" data-number="4.11">
+<h2 data-number="4.11" class="anchored" data-anchor-id="summary-of-results"><span class="header-section-number">4.11</span> Summary of Results</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">Model =</span> <span class="fu">c</span>(<span class="st">"Seasonal Average"</span>,</span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"OLS Regression"</span>, </span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Lasso Regression"</span>, </span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Pruned Regression Tree"</span>, </span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Random Forest"</span>, </span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"XGBoost"</span>, </span>
+<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Lasso Regression with Interactions"</span>, </span>
+<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Ridge Regression"</span>,</span>
+<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Seasonal ETS"</span>,</span>
+<span id="cb72-10"><a href="#cb72-10" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"ARIMAx"</span>),</span>
+<span id="cb72-11"><a href="#cb72-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">mse_pct =</span> <span class="fu">c</span>(<span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_avg),</span>
+<span id="cb72-12"><a href="#cb72-12" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_ols),</span>
+<span id="cb72-13"><a href="#cb72-13" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_lasso),</span>
+<span id="cb72-14"><a href="#cb72-14" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_pruned),</span>
+<span id="cb72-15"><a href="#cb72-15" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_forest),</span>
+<span id="cb72-16"><a href="#cb72-16" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_xgb),</span>
+<span id="cb72-17"><a href="#cb72-17" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_lasso_int),</span>
+<span id="cb72-18"><a href="#cb72-18" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_ridge),</span>
+<span id="cb72-19"><a href="#cb72-19" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test_ts<span class="sc">$</span>NetUse, yhat_ets),</span>
+<span id="cb72-20"><a href="#cb72-20" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">mse_pct</span>(test<span class="sc">$</span>NetUse, yhat_arimax))</span>
+<span id="cb72-21"><a href="#cb72-21" aria-hidden="true" tabindex="-1"></a>                  ) <span class="sc">|&gt;</span> </span>
+<span id="cb72-22"><a href="#cb72-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">mse_pct =</span> <span class="fu">round</span>(mse_pct, <span class="dv">2</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb72-23"><a href="#cb72-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(mse_pct) <span class="sc">|&gt;</span> </span>
+<span id="cb72-24"><a href="#cb72-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 2
+   Model                              mse_pct
+   &lt;chr&gt;                                &lt;dbl&gt;
+ 1 Lasso Regression with Interactions    20.0
+ 2 XGBoost                               20.9
+ 3 Random Forest                         21.6
+ 4 Pruned Regression Tree                22.9
+ 5 OLS Regression                        29.6
+ 6 Seasonal Average                      29.7
+ 7 Lasso Regression                      30  
+ 8 Ridge Regression                      30.4
+ 9 Seasonal ETS                          49.9
+10 ARIMAx                                56.0</code></pre>
+</div>
 </div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
