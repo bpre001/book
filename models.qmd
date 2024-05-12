@@ -5,7 +5,6 @@
 library(tidyverse)
 library(readxl)
 library(fpp3)
-library(GGally)
 library(glmnet)
 library(rpart)
 library(ranger)
@@ -54,8 +53,7 @@ mse_pct <- function(actual, predicted) {
 
 ## Seasonal Average
 
-Probably the simplest model to implement is a seasonal average model. This model calculates the arithmetic mean of NetUse by quarter and hour and applies this as our prediction of net energy consumption for our test data set.
-
+Probably the simplest (and most intuitive) model to implement is a seasonal average model. This model calculates the arithmetic mean of NetUse by quarter and hour and applies this as our prediction of net energy consumption for our test data set.  It is an ANOVA of sorts, but with a time series twist, and would be a logical place to start when considering the impact of time on energy consumption and generation.
 
 ```{r avg}
 
@@ -79,12 +77,15 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_avg)
-
+# mse_pct(test$NetUse, yhat_avg)
 
 ```
 
+While simple, the Seasonal Average Model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_avg),1)`% of the variance of the actual values in the test dataset.  This is a good starting point for our analysis, and we will now consider more complex models that may provide better predictions.
+
 ## OLS Linear Regression
+
+The next model we will consider is a simple linear regression model. This model will use all of the variables in our data set to predict NetUse. We will use the lm() function in R to fit the model and then use the predict() function to generate predictions for our test data set. We will then calculate the mean squared error as a percentage of the variance of the actual values in the test dataset.  Note that the climatological factors such as dry temperature (`Tdry`), and relative humidity (`RH`) are included in the model, and we assume that they are known.  In reality, these would be forecasted values, and we would need to consider the uncertainty in these forecasts when making predictions.  Other variates such as `sunUp` and `workDay` are binary variables that are known in advance.
 
 ```{r ols}
 
@@ -103,9 +104,12 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_ols)
+# mse_pct(test$NetUse, yhat_ols)
 
 ```
+
+In this case, the OLS Regression Model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_ols),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Seasonal Average Model.  
+
 ## Lasso Regression 
 
 ```{r lasso}
@@ -138,9 +142,11 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_lasso)
+# mse_pct(test$NetUse, yhat_lasso)
 
 ```
+
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_lasso),1)`% of the variance of the actual values in the test dataset, a slight improvement over the OLS Regression Model.  The Lasso Regression Model has the advantage of performing variable selection, which can be useful when there are many variables in the model.  However, in this case, the Lasso Regression Model has selected nearly all of the variables `hour`, `quarter`, `sunUp`, `workDay`, `Tdry`, and `RH` as important predictors of `NetUse`.
 
 ## Lasso Regression with Interactions
 
@@ -173,9 +179,11 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_lasso_int)
+# mse_pct(test$NetUse, yhat_lasso_int)
 
 ```
+
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_lasso_int),1)`% of the variance of the actual values in the test dataset, a significant improvement over the Lasso Regression Model, and our best predictive model so far.
 
 ## Ridge Regression
 
@@ -200,11 +208,13 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_ridge)
+# mse_pct(test$NetUse, yhat_ridge)
 
 ```
 
-## Regression Tree
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_ridge),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Lasso Regression Model.  The Ridge Regression Model has the advantage of being less sensitive to multicollinearity than the Lasso Regression Model.
+
+## Pruned Regression Tree
 
 ```{r regression_tree}
 
@@ -250,9 +260,11 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_pruned)
+# mse_pct(test$NetUse, yhat_pruned)
 
 ```
+
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_pruned),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Lasso Regression Model.  The Pruned Regression Tree Model has the advantage of being interpretable and easy to understand.
 
 ## Random Forest
 
@@ -281,9 +293,11 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_forest)
+# mse_pct(test$NetUse, yhat_forest)
 
 ```
+
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_forest),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Pruned Regression Tree Model.  The Random Forest Model has the advantage of being less sensitive to overfitting than the Pruned Regression Tree Model.
 
 ## XGBoost
 
@@ -318,11 +332,11 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_xgb)
+# mse_pct(test$NetUse, yhat_xgb)
 
 ```
 
-
+This model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_xgb),1)`% of the variance of the actual values in the test dataset, a slight improvement over the Random Forest Model.  The XGBoost Model has the advantage of being less sensitive to overfitting than the Random Forest Model.
 
 ## Seasonal ETS
 
@@ -344,9 +358,11 @@ test_ts |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test_ts$NetUse, yhat_ets)
+# mse_pct(test_ts$NetUse, yhat_ets)
 
 ```
+
+This ETS Model has a mean squared error of `r round(mse_pct(test_ts$NetUse, yhat_ets),1)`% of the variance of the actual values in the test dataset, permornimg much worse that all of the models presented so far.
 
 ## ARIMAx
 
@@ -379,9 +395,11 @@ test |>
        x = "Predicted",
        y = "Actual")
 
-mse_pct(test$NetUse, yhat_arimax)
+# mse_pct(test$NetUse, yhat_arimax)
 
 ```
+
+This ARIMAx Model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_arimax),1)`% of the variance of the actual values in the test dataset, and is fighting for the wooden spoon along with the ETS Model.  The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are).  Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.
 
 ## Summary of Results
 
