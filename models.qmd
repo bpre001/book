@@ -304,7 +304,8 @@ xgb <- xgboost(data = train_X,
                label = train$NetUse, 
                nrounds = xgb_cv$best_iteration, 
                eta = 0.1,
-               objective = "reg:squarederror")
+               objective = "reg:squarederror",
+               print_every_n = 10)
 
 yhat_xgb <- predict(xgb, newdata = test_X)
 
