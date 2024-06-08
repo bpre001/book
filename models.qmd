@@ -401,6 +401,15 @@ test |>
 
 This ARIMAx Model has a mean squared error of `r round(mse_pct(test$NetUse, yhat_arimax),1)`% of the variance of the actual values in the test dataset, and is the worst performing predictive model presented so far.  The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are).  Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.
 
+## NNETAR
+
+```{r nnar}
+
+
+
+```
+
+
 ## Summary of Results
 
 ```{r results}

@@ -243,8 +243,8 @@
     "objectID": "models.html#summary-of-results",
     "href": "models.html#summary-of-results",
     "title": "4  Models",
-    "section": "4.11 Summary of Results",
-    "text": "4.11 Summary of Results\n\nresults &lt;- tibble(Model = c(\"Seasonal Average\",\n                            \"OLS Regression\", \n                            \"Lasso Regression\", \n                            \"Pruned Regression Tree\", \n                            \"Random Forest\", \n                            \"XGBoost\", \n                            \"Lasso Regression with Interactions\", \n                            \"Ridge Regression\",\n                            \"Seasonal ETS\",\n                            \"ARIMAx\"),\n                   mse_pct = c(mse_pct(test$NetUse, yhat_avg),\n                               mse_pct(test$NetUse, yhat_ols),\n                               mse_pct(test$NetUse, yhat_lasso),\n                               mse_pct(test$NetUse, yhat_pruned),\n                               mse_pct(test$NetUse, yhat_forest),\n                               mse_pct(test$NetUse, yhat_xgb),\n                               mse_pct(test$NetUse, yhat_lasso_int),\n                               mse_pct(test$NetUse, yhat_ridge),\n                               mse_pct(test_ts$NetUse, yhat_ets),\n                               mse_pct(test$NetUse, yhat_arimax))\n                  ) |&gt; \n  mutate(mse_pct = round(mse_pct, 2)) |&gt; \n  arrange(mse_pct) |&gt; \n  print()\n\n# A tibble: 10 × 2\n   Model                              mse_pct\n   &lt;chr&gt;                                &lt;dbl&gt;\n 1 Lasso Regression with Interactions    20.0\n 2 XGBoost                               20.9\n 3 Random Forest                         21.6\n 4 Pruned Regression Tree                22.9\n 5 OLS Regression                        29.6\n 6 Seasonal Average                      29.7\n 7 Lasso Regression                      30  \n 8 Ridge Regression                      30.4\n 9 Seasonal ETS                          49.9\n10 ARIMAx                                56.0",
+    "section": "4.12 Summary of Results",
+    "text": "4.12 Summary of Results\n\nresults &lt;- tibble(Model = c(\"Seasonal Average\",\n                            \"OLS Regression\", \n                            \"Lasso Regression\", \n                            \"Pruned Regression Tree\", \n                            \"Random Forest\", \n                            \"XGBoost\", \n                            \"Lasso Regression with Interactions\", \n                            \"Ridge Regression\",\n                            \"Seasonal ETS\",\n                            \"ARIMAx\"),\n                   mse_pct = c(mse_pct(test$NetUse, yhat_avg),\n                               mse_pct(test$NetUse, yhat_ols),\n                               mse_pct(test$NetUse, yhat_lasso),\n                               mse_pct(test$NetUse, yhat_pruned),\n                               mse_pct(test$NetUse, yhat_forest),\n                               mse_pct(test$NetUse, yhat_xgb),\n                               mse_pct(test$NetUse, yhat_lasso_int),\n                               mse_pct(test$NetUse, yhat_ridge),\n                               mse_pct(test_ts$NetUse, yhat_ets),\n                               mse_pct(test$NetUse, yhat_arimax))\n                  ) |&gt; \n  mutate(mse_pct = round(mse_pct, 2)) |&gt; \n  arrange(mse_pct) |&gt; \n  print()\n\n# A tibble: 10 × 2\n   Model                              mse_pct\n   &lt;chr&gt;                                &lt;dbl&gt;\n 1 Lasso Regression with Interactions    20.0\n 2 XGBoost                               20.9\n 3 Random Forest                         21.6\n 4 Pruned Regression Tree                22.9\n 5 OLS Regression                        29.6\n 6 Seasonal Average                      29.7\n 7 Lasso Regression                      30  \n 8 Ridge Regression                      30.4\n 9 Seasonal ETS                          49.9\n10 ARIMAx                                56.0",
     "crumbs": [
       "<span class='chapter-number'>4</span>  <span class='chapter-title'>Models</span>"
     ]
@@ -257,6 +257,16 @@
     "text": "In summary, this book has no content whatsoever.\n\n1 + 1\n\n[1] 2",
     "crumbs": [
       "<span class='chapter-number'>5</span>  <span class='chapter-title'>Summary</span>"
+    ]
+  },
+  {
+    "objectID": "models.html#nnetar",
+    "href": "models.html#nnetar",
+    "title": "4  Models",
+    "section": "4.11 NNETAR",
+    "text": "4.11 NNETAR",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Models</span>"
     ]
   }
 ]

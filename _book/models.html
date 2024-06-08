@@ -190,7 +190,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#xgboost" id="toc-xgboost" class="nav-link" data-scroll-target="#xgboost"><span class="header-section-number">4.8</span> XGBoost</a></li>
   <li><a href="#seasonal-ets" id="toc-seasonal-ets" class="nav-link" data-scroll-target="#seasonal-ets"><span class="header-section-number">4.9</span> Seasonal ETS</a></li>
   <li><a href="#arimax" id="toc-arimax" class="nav-link" data-scroll-target="#arimax"><span class="header-section-number">4.10</span> ARIMAx</a></li>
-  <li><a href="#summary-of-results" id="toc-summary-of-results" class="nav-link" data-scroll-target="#summary-of-results"><span class="header-section-number">4.11</span> Summary of Results</a></li>
+  <li><a href="#nnetar" id="toc-nnetar" class="nav-link" data-scroll-target="#nnetar"><span class="header-section-number">4.11</span> NNETAR</a></li>
+  <li><a href="#summary-of-results" id="toc-summary-of-results" class="nav-link" data-scroll-target="#summary-of-results"><span class="header-section-number">4.12</span> Summary of Results</a></li>
   </ul>
 </nav>
     </div>
@@ -899,8 +900,11 @@ AIC=81937.94   AICc=81937.96   BIC=82021.82</code></pre>
 </div>
 <p>This ARIMAx Model has a mean squared error of 56% of the variance of the actual values in the test dataset, and is the worst performing predictive model presented so far. The ARIMAx Model has the advantage of being able to model the autocorrelation in the data, which can be useful when there are time-dependent patterns in the data (which there are). Non-stationarity is probably the reason for the poor performance of the ARIMAx Model.</p>
 </section>
-<section id="summary-of-results" class="level2" data-number="4.11">
-<h2 data-number="4.11" class="anchored" data-anchor-id="summary-of-results"><span class="header-section-number">4.11</span> Summary of Results</h2>
+<section id="nnetar" class="level2" data-number="4.11">
+<h2 data-number="4.11" class="anchored" data-anchor-id="nnetar"><span class="header-section-number">4.11</span> NNETAR</h2>
+</section>
+<section id="summary-of-results" class="level2" data-number="4.12">
+<h2 data-number="4.12" class="anchored" data-anchor-id="summary-of-results"><span class="header-section-number">4.12</span> Summary of Results</h2>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">Model =</span> <span class="fu">c</span>(<span class="st">"Seasonal Average"</span>,</span>
 <span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"OLS Regression"</span>, </span>
